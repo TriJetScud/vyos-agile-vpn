@@ -1,0 +1,4 @@
+type: txt
+help: File containing the X.509 certificate for the Certificate Authority (CA)
+syntax:expression: exec "/opt/vyatta/sbin/check_file_in_config_dir $VAR(@) '/config/auth'"
+val_help: File in /config/auth

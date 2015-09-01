@@ -1,0 +1,5 @@
+type: txt
+help: Authentication mode for remote access Agile VPN
+syntax:expression: $VAR(@) in "local", "x509"; "Authentication mode must be \"local\" or \"x509\""
+val_help: local; Use username/password in the configuration
+val_help: x509; Use x509 certificates

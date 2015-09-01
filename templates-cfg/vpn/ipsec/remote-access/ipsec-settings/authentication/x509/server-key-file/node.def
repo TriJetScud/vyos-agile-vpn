@@ -1,0 +1,4 @@
+type: txt
+help: File containing the private key for the X.509 certificate for the remote access VPN server (this host)
+syntax:expression: exec "/opt/vyatta/sbin/check_file_in_config_dir $VAR(@) '/config/auth'"
+val_help: File in /config/auth

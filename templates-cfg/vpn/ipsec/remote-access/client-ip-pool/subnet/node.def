@@ -1,0 +1,2 @@
+help: An IPv4 prefix where addresses will be assigned from
+type: ipv4net

@@ -1,0 +1,3 @@
+type: txt
+help: Key for accessing the specified server
+syntax:expression: pattern $VAR(@) "^.{,48}$" ; "Server key too long"
