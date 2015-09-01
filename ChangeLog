@@ -1,0 +1,5 @@
+vyos-vpn-agile (0.1) UNRELEASED; urgency=low
+
+  * Initial Packaging
+
+ -- Jeff Leung <jleung@v10networks.ca>  Tue, 01 Sep 2015 06:15:47 +0000
