@@ -4,7 +4,7 @@ share_perl5dir	 = $(datarootdir)/perl5/Vyatta
 ravpnconfdir = $(sysconfdir)/ravpn
 bin_sudo_usersdir = $(bindir)/sudo-users
 
-sbin_SCRIPTS = scripts/vyatta-update-agile.pl
+sbin_SCRIPTS = scripts/vyos-update-agile.pl
 
 share_perl5_DATA = lib/Vyatta/AgileConfig.pm
 
