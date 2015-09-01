@@ -1,0 +1,7 @@
+The Debian Package vyatta-ravpn
+---------------------------------
+
+This package has the Vyatta configuration/operational templates and scripts for remote access VPN.
+
+ -- An-Cheng Huang <ancheng@vyatta.com> Fri, 28 Dec 2007
+

@@ -1,0 +1,15 @@
+Source: vyos-vpn-agile
+Section: contrib/net
+Priority: extra
+Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
+Build-Depends: debhelper (>= 5), autotools-dev
+Standards-Version: 3.7.2
+
+Package: vyos-vpn-agile
+Architecture: all
+Depends: perl,
+ vyatta-cfg,
+ vyatta-op,
+ vyatta-cfg-vpn,
+ vyatta-op-vpn,
+Description: VyOS Agile VPN configuration scripts
