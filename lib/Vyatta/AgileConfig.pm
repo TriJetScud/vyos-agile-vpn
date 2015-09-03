@@ -16,7 +16,6 @@ my $SERVER_KEY_PATH = '/etc/ipsec.d/private';
 
 my %fields = (
   _mode             => undef,
-  _psk              => undef,
   _x509_cacert      => undef,
   _x509_crl         => undef,
   _x509_s_cert      => undef,
@@ -63,10 +62,8 @@ sub setup {
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
   # hard code this to x509 for now
   $self->{_mode} = 'x509';
-  $self->{_ike_lifetime} = $config->returnValue('ipsec-settings ike-lifetime');
-  $self->{_psk}
-    = $config->returnValue('ipsec-settings authentication pre-shared-secret');
-  my $pfx = 'ipsec-settings authentication x509';
+  $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
+  my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnValue("$pfx ca-cert-file");
   $self->{_x509_crl} = $config->returnValue("$pfx crl-file");
   $self->{_x509_s_cert} = $config->returnValue("$pfx server-cert-file");
@@ -138,12 +135,10 @@ sub setupOrig {
   }
   $self->{_dhcp_if} = $config->returnOrigValue('dhcp-interface');
   $self->{_mode} = $config->returnOrigValue(
-                            'ipsec-settings authentication mode');
+                            'ike-settings authentication mode');
   $self->{_ike_lifetime} = $config->returnOrigValue(
-                            'ipsec-settings ike-lifetime');
-  $self->{_psk} = $config->returnOrigValue(
-                            'ipsec-settings authentication pre-shared-secret');
-  my $pfx = 'ipsec-settings authentication x509';
+                            'ike-settings ike-lifetime');
+  my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnOrigValue("$pfx ca-cert-file");
   $self->{_x509_crl} = $config->returnOrigValue("$pfx crl-file");
   $self->{_x509_s_cert} = $config->returnOrigValue("$pfx server-cert-file");
@@ -226,7 +221,6 @@ sub isDifferentFrom {
   return 1 if ($this->{_is_empty} ne $that->{_is_empty});
   return 1 if ($this->{_mode} ne $that->{_mode});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
-  return 1 if ($this->{_psk} ne $that->{_psk});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
   return 1 if ($this->{_x509_crl} ne $that->{_x509_crl});
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
@@ -256,7 +250,6 @@ sub needsRestart {
   return 1 if ($this->{_is_empty} ne $that->{_is_empty});
   return 1 if ($this->{_mode} ne $that->{_mode});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
-  return 1 if ($this->{_psk} ne $that->{_psk});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
   return 1 if ($this->{_x509_crl} ne $that->{_x509_crl});
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
@@ -322,43 +315,19 @@ sub setupX509IfNecessary {
 
 sub get_ipsec_secrets {
   my ($self) = @_;
-  return (undef, "IPsec authentication mode not defined")
-    if (!defined($self->{_mode}));
-  my $mode = $self->{_mode};
-  if ($mode eq 'pre-shared-secret') {
-    # PSK
-    my $key = $self->{_psk};
-    my $oaddr = $self->{_out_addr};
-    if (defined($self->{_dhcp_if})){
-      return  (undef, "The specified interface is not configured for DHCP")
-        if (!Vyatta::Misc::is_dhcp_enabled($self->{_dhcp_if},0));
-      my $dhcpif = $self->{_dhcp_if};
-      $oaddr = get_dhcp_addr($dhcpif);
-    }
-    return (undef, "IPsec pre-shared secret not defined") if (!defined($key));
-    return (undef, "Outside address not defined") if (!defined($oaddr));
-    my $str = "$cfg_delim_begin\n";
-    $oaddr = "#" if ($oaddr eq '');
-    $str .= "$oaddr %any : PSK \"$key\"";
-    $str .= " \#dhcp-ra-interface=$self->{_dhcp_if}\#" if (defined($self->{_dhcp_if}));
-    $str .= "\n";
-    $str .= "$cfg_delim_end\n";
-    return ($str, undef);
-  } else {
-    # X509
-    my $key_file = $self->{_x509_s_key};
-    my $key_pass = $self->{_x509_s_pass};
-    return (undef, "\"server-key-file\" not defined")
-      if (!defined($key_file));
-    my $pstr = (defined($key_pass) ? " \"$key_pass\"" : '');
-    $key_file =~ s/^.*(\/[^\/]+)$/${SERVER_KEY_PATH}$1/;
-    my $str =<<EOS;
+  # X509
+  my $key_file = $self->{_x509_s_key};
+  my $key_pass = $self->{_x509_s_pass};
+  return (undef, "\"server-key-file\" not defined")
+    if (!defined($key_file));
+  my $pstr = (defined($key_pass) ? " \"$key_pass\"" : '');
+  $key_file =~ s/^.*(\/[^\/]+)$/${SERVER_KEY_PATH}$1/;
+  my $str =<<EOS;
 $cfg_delim_begin
 : RSA ${key_file}$pstr
 $cfg_delim_end
 EOS
     return ($str, undef);
-  }
 }
 sub get_dhcp_addr{
   my ($if) = @_;
@@ -638,7 +607,6 @@ sub maybeClustering {
 sub print_str {
   my ($self) = @_;
   my $str = 'l2tp vpn';
-  $str .= "\n  psk " . $self->{_psk};
   $str .= "\n  oaddr " . $self->{_out_addr};
   $str .= "\n  onexthop " . $self->{_out_nexthop};
   $str .= "\n  cip_start " . $self->{_client_ip_start};
