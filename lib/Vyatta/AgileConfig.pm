@@ -1,4 +1,4 @@
-package Vyatta::L2TPConfig;
+package Vyatta::AgileConfig;
 
 use strict;
 use lib "/opt/vyatta/share/perl5";
@@ -6,8 +6,8 @@ use Vyatta::Config;
 use Vyatta::Misc;
 use NetAddr::IP;
 
-my $cfg_delim_begin = '### Vyatta L2TP VPN Begin ###';
-my $cfg_delim_end = '### Vyatta L2TP VPN End ###';
+my $cfg_delim_begin = '### VyOS Agile VPN Begin ###';
+my $cfg_delim_end = '### VyOS Agile VPN End ###';
 
 my $CA_CERT_PATH = '/etc/ipsec.d/cacerts';
 my $CRL_PATH = '/etc/ipsec.d/crls';
@@ -24,7 +24,6 @@ my %fields = (
   _x509_s_pass      => undef,
   _out_addr         => undef,
   _dhcp_if          => undef,
-  _out_nexthop      => undef,
   _client_ip_pool   => undef,
   _auth_mode        => undef,
   _mtu              => undef,
@@ -53,7 +52,7 @@ sub setup {
   my ( $self ) = @_;
   my $config = new Vyatta::Config;
 
-  $config->setLevel('vpn l2tp remote-access');
+  $config->setLevel('vpn ipsec remote-access');
   my @nodes = $config->listNodes();
   if (scalar(@nodes) <= 0) {
     $self->{_is_empty} = 1;
@@ -62,7 +61,8 @@ sub setup {
     $self->{_is_empty} = 0;
   }
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
-  $self->{_mode} = $config->returnValue('ipsec-settings authentication mode');
+  # hard code this to x509 for now
+  $self->{_mode} = 'x509';
   $self->{_ike_lifetime} = $config->returnValue('ipsec-settings ike-lifetime');
   $self->{_psk}
     = $config->returnValue('ipsec-settings authentication pre-shared-secret');
@@ -74,8 +74,7 @@ sub setup {
   $self->{_x509_s_pass} = $config->returnValue("$pfx server-key-password");
 
   $self->{_out_addr} = $config->returnValue('outside-address');
-  $self->{_out_nexthop} = $config->returnValue('outside-nexthop');
-  $self->{_client_ip_pool} = $config->returnValue('client-ip-pool prefix');
+  $self->{_client_ip_pool} = $config->returnValue('client-ip-pool subnet');
   $self->{_auth_mode} = $config->returnValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnValue('mtu');
@@ -129,7 +128,7 @@ sub setupOrig {
   my ( $self ) = @_;
   my $config = new Vyatta::Config;
 
-  $config->setLevel('vpn l2tp remote-access');
+  $config->setLevel('vpn ipsec remote-access');
   my @nodes = $config->listOrigNodes();
   if (scalar(@nodes) <= 0) {
     $self->{_is_empty} = 1;
@@ -152,8 +151,7 @@ sub setupOrig {
   $self->{_x509_s_pass} = $config->returnOrigValue("$pfx server-key-password");
 
   $self->{_out_addr} = $config->returnOrigValue('outside-address');
-  $self->{_out_nexthop} = $config->returnOrigValue('outside-nexthop');
-  $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool prefix');
+  $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool subnet');
   $self->{_auth_mode} = $config->returnOrigValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnOrigValue('mtu');
@@ -236,7 +234,6 @@ sub isDifferentFrom {
   return 1 if ($this->{_x509_s_pass} ne $that->{_x509_s_pass});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
-  return 1 if ($this->{_out_nexthop} ne $that->{_out_nexthop});
   return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
   return 1 if ($this->{_client_ip_stop} ne $that->{_client_ip_stop});
   return 1 if ($this->{_auth_mode} ne $that->{_auth_mode});
@@ -382,13 +379,14 @@ sub get_ra_conn {
     my $dhcpif = $self->{_dhcp_if};
     $oaddr = get_dhcp_addr($dhcpif);
   }
+  # use strongSwan's %defaultroute macro if outside address is set to 0.0.0.0
+  if ($self->{_out_addr} == "0.0.0.0") {
+	$oaddr = "%defaultroute";
+  }
   return (undef, "Outside address not defined") if (!defined($oaddr));
-  my $onh = $self->{_out_nexthop};
-  return (undef, "outside-nexthop cannot be defined with dhcp-interface") 
-    if (defined($onh) && defined($self->{_dhcp_if}));
   return (undef, "Client IP Pool must be defined")
-    if (!defined($self->{_client_ip_pool});
-  my $onhstr = (defined($onh) ? "  leftnexthop=$onh\n" : "");
+    if (!defined($self->{_client_ip_pool}));
+  my $client_ip_pool = $self->{_client_ip_pool};
   my $auth_str = "  authby=secret\n";
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
@@ -398,10 +396,6 @@ sub get_ra_conn {
       if (!defined($server_cert));
     $server_cert =~ s/^.*(\/[^\/]+)$/${SERVER_CERT_PATH}$1/;
     $auth_str =<<EOS
-  authby=rsasig
-  leftrsasigkey=%cert
-  rightrsasigkey=%cert
-  rightca=%same
   leftcert=$server_cert
 EOS
   }
@@ -411,14 +405,11 @@ conn $name
 ${auth_str}
   keyexchange=ikev2
   left=$oaddr
-${onhstr}  leftprotoport=17/1701
+  leftsubnet=0.0.0.0/0
   right=%any
-  rightprotoport=17/%any
-  auto=add
-  dpddelay=15
-  dpdtimeout=45
-  dpdaction=clear
+  rightsourceip=${client_ip_pool}
   rekey=no
+  auto=add
 EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
@@ -460,51 +451,30 @@ sub get_chap_secrets {
   $str .= "\n$cfg_delim_end\n";
   return ($str, undef);
 }
-
-sub get_ppp_opts {
+sub get_strongswan_opts {
   my ($self) = @_;
   my @dns = @{$self->{_dns}};
   my @wins = @{$self->{_wins}};
-  my $sstr = '';
+  my $sstr = "\n\tdns =" ;
   foreach my $d (@dns) {
-    $sstr .= ('ms-dns ' . "$d\n");
+	$sstr .= (" $d,");
   }
+  #delete the last line
+  chop($sstr);
+  $sstr .= "\n\tnbns =";
   foreach my $w (@wins) {
-    $sstr .= ('ms-wins ' . "$w\n");
+	$sstr .= (" $w,");
   }
+  chop($sstr);
   my $rstr = '';
-  if ($self->{_auth_mode} eq 'radius') {
-    $rstr =<<EOS;
-plugin radius.so
-radius-config-file /etc/radiusclient-ng/radiusclient-l2tp.conf
-plugin radattr.so
+  $rstr = <<EOS;
+attr {
+	$sstr
+	load = yes
+}
 EOS
-  }
-  my $str =<<EOS;
-$cfg_delim_begin
-name xl2tpd
-linkname l2tp
-ipcp-accept-local
-ipcp-accept-remote
-${sstr}noccp
-auth
-crtscts
-idle 1800
-nodefaultroute
-debug
-lock
-proxyarp
-connect-delay 5000
-EOS
-  if (defined ($self->{_auth_require})){
-    $str .= "require-".$self->{_auth_require}."\n";
-  }
-  if (defined ($self->{_mtu})){
-    $str .= "mtu $self->{_mtu}\n"
-         .  "mru $self->{_mtu}\n";
-  }
-  $str .= "${rstr}$cfg_delim_end\n";
-  return ($str, undef);
+
+  return ($rstr, undef);
 }
 
 sub get_radius_conf {
@@ -633,7 +603,7 @@ sub removeCfg {
   system("sed -i '/$cfg_delim_begin/,/$cfg_delim_end/d' $file");
   if ($? >> 8) {
     print STDERR <<EOM;
-L2TP VPN configuration error: Cannot remove old config from $file.
+IKEv2 VPN configuration error: Cannot remove old config from $file.
 EOM
     return 0;
   }
@@ -646,7 +616,7 @@ sub writeCfg {
   my $WR = undef;
   if (!open($WR, "$op","$file")) {
     print STDERR <<EOM;
-L2TP VPN configuration error: Cannot write config to $file.
+IKEv2 VPN configuration error: Cannot write config to $file.
 EOM
     return 0;
   }

@@ -4,6 +4,8 @@ use strict;
 use lib "/opt/vyatta/share/perl5";
 use Vyatta::Config;
 use Vyatta::AgileConfig;
+use File::Copy;
+use Data::Dumper;
 
 my $RACONN_NAME = 'agile-remote-access';
 ## XXX only the part after the last '-' affects order of conn matching!!!?
@@ -14,9 +16,11 @@ my $FILE_IPSEC_SECRETS = '/etc/ipsec.secrets';
 my $FILE_IPSEC_RACONN = "/etc/ipsec.d/tunnels/$RACONN_NAME";
 my $FILE_CHAP_SECRETS = '/etc/ppp/secrets/chap-ravpn';
 my $IPSEC_CTL_FILE = '/var/run/charon.ctl';
-my $FILE_RADIUS_CONF = '/etc/radiusclient-ng/radiusclient-l2tp.conf';
-my $FILE_RADIUS_KEYS = '/etc/radiusclient-ng/servers-l2tp';
-my $FILE_DHCP_HOOK = '/etc/dhcp3/dhclient-exit-hooks.d/l2tpd';
+my $STRONGSWAN_ATTR_CONF = '/etc/strongswan.d/charon/attr.conf';
+my $STRONGSWAN_AGILE_CONF = '/etc/strongswan.d/charon/agile_attr.conf';
+#my $FILE_RADIUS_CONF = '/etc/radiusclient-ng/radiusclient-l2tp.conf';
+#my $FILE_RADIUS_KEYS = '/etc/radiusclient-ng/servers-l2tp';
+#my $FILE_DHCP_HOOK = '/etc/dhcp3/dhclient-exit-hooks.d/l2tpd';
 
 my $gconfig = new Vyatta::Config;
 my $config = new Vyatta::AgileConfig;
@@ -29,6 +33,13 @@ if ($config->isEmpty()) {
     # remove remote-access vpn connections
     system ("ipsec rereadall >&/dev/null");
     system ("ipsec update >&/dev/null");
+	
+	if ( ! -f $STRONGSWAN_ATTR_CONF) {
+		move("$STRONGSWAN_ATTR_CONF.noload", $STRONGSWAN_ATTR_CONF);
+	}
+	if ( -f $FILE_IPSEC_RACONN ) {
+		system("rm -f $FILE_IPSEC_RACONN");
+	}
   }
   exit 0;
 }
@@ -41,30 +52,18 @@ my $nat_traversal = $gconfig->returnValue('vpn ipsec nat-traversal');
 ## nat-networks
 my @nat_nets = $gconfig->listNodes('vpn ipsec nat-networks allowed-network');
 
-my ($dhcp_hook, $ipsec_secrets, $ra_conn, $chap_secrets, $ppp_opts, $l2tp_conf,
-    $radius_conf, $radius_keys, $err)
-  = (undef, undef, undef, undef, undef, undef, undef, undef, undef);
+my ($ipsec_secrets, $ra_conn, $radius_conf, $radius_keys, $err, $sswan_opts)
+  = (undef, undef, undef, undef, undef, undef);
 while (1) {
-  if ((scalar @ipsec_ifs) <= 0) {
-    $err = '"vpn ipsec ipsec-interfaces" must be specified';
-    last;
-  }
-  if ($nat_traversal ne 'enable') {
-    $err = '"vpn ipsec nat-traversal" must be enabled';
-    last;
-  }
-  if ((scalar @nat_nets) <= 0) {
-    $err = '"vpn ipsec nat-networks" must be specified';
-    last;
-  }
   ($ipsec_secrets, $err) = $config->get_ipsec_secrets();
   last if (defined($err));
   ($ra_conn, $err) = $config->get_ra_conn($RACONN_NAME);
   last if (defined($err));
+  ($sswan_opts, $err) = $config->get_strongswan_opts();
+  last if (defined($err));
   ($radius_conf, $err) = $config->get_radius_conf();
   last if (defined($err));
   ($radius_keys, $err) = $config->get_radius_keys();
-  last if (defined($err));
   $err = $config->setupX509IfNecessary();
   last;
 }
@@ -72,26 +71,28 @@ if (defined($err)) {
   print STDERR "IKEv2 VPN configuration error: $err.\n";
   exit 1;
 }
+if ( -f $STRONGSWAN_ATTR_CONF ) {
+  move($STRONGSWAN_ATTR_CONF, "$STRONGSWAN_ATTR_CONF.noload");
+  system("touch $STRONGSWAN_AGILE_CONF");
+}
+if ( ! -f $FILE_IPSEC_RACONN ) {
+  system("touch $FILE_IPSEC_RACONN");
+}
+
 exit 1 if (!$config->removeCfg($FILE_IPSEC_CFG));
 exit 1 if (!$config->removeCfg($FILE_IPSEC_SECRETS));
 exit 1 if (!$config->removeCfg($FILE_IPSEC_RACONN));
-exit 1 if (!$config->removeCfg($FILE_RADIUS_CONF));
-exit 1 if (!$config->removeCfg($FILE_RADIUS_KEYS));
+exit 1 if (!$config->removeCfg($STRONGSWAN_AGILE_CONF));
+#exit 1 if (!$config->removeCfg($FILE_RADIUS_CONF));
+#exit 1 if (!$config->removeCfg($FILE_RADIUS_KEYS));
 
 my $ipsec_cfg = "include $FILE_IPSEC_RACONN";
 exit 1 if (!$config->writeCfg($FILE_IPSEC_CFG, $ipsec_cfg, 1, 1));
 exit 1 if (!$config->writeCfg($FILE_IPSEC_SECRETS, $ipsec_secrets, 1, 0));
 exit 1 if (!$config->writeCfg($FILE_IPSEC_RACONN, $ra_conn, 0, 0));
-exit 1 if (!$config->writeCfg($FILE_RADIUS_CONF, $radius_conf, 0, 0));
-exit 1 if (!$config->writeCfg($FILE_RADIUS_KEYS, $radius_keys, 0, 0));
-
-system('cat /etc/ppp/secrets/chap-* > /etc/ppp/chap-secrets');
-if ($? >> 8) {
-  print STDERR <<EOM;
-IKEv2 VPN configuration error: Cannot write chap-secrets.
-EOM
-  exit 1;
-}
+exit 1 if (!$config->writeCfg($STRONGSWAN_AGILE_CONF, $sswan_opts, 0, 1));
+#exit 1 if (!$config->writeCfg($FILE_RADIUS_CONF, $radius_conf, 0, 0));
+#exit 1 if (!$config->writeCfg($FILE_RADIUS_KEYS, $radius_keys, 0, 0));
 
 # wait for ipsec to settle
 if (!($config->maybeClustering($gconfig, @ipsec_ifs))) {
@@ -110,7 +111,7 @@ if (!($config->maybeClustering($gconfig, @ipsec_ifs))) {
 # only do this if we are not doing clustering.
 if (!($config->maybeClustering($gconfig, @ipsec_ifs))) {
   system ("ipsec rereadall >&/dev/null");
-  system ("ipsec update >&/dev/null");
+  system ("ipsec reload >&/dev/null");
 }
 
 if (!($config->isDifferentFrom($oconfig))) {
@@ -122,7 +123,7 @@ if (!($config->maybeClustering($gconfig, @ipsec_ifs))
     && $config->needsRestart($oconfig)) {
   # update ipsec.conf for remote-access connections
   system ("ipsec rereadall >&/dev/null");
-  system ("ipsec update >&/dev/null");
+  system ("ipsec reload >&/dev/null");
 }
 exit 0;
 
