@@ -83,10 +83,7 @@ sub setup {
     my $dlvl = "authentication local-users username $user disable";
     my $disable = 'enable';
     $disable = 'disable' if $config->exists("$dlvl");
-    my $ilvl = "authentication local-users username $user static-ip";
-    my $ip = $config->returnValue("$ilvl");
-    $ip = 'none' if (!defined($ip));
-    $self->{_auth_local} = [ @{$self->{_auth_local}}, $user, $pass, $disable, $ip ];
+    $self->{_auth_local} = [ @{$self->{_auth_local}}, $user, $pass, $disable];
   }
 
   my @rservers = $config->listNodes('authentication radius-server');
@@ -158,10 +155,7 @@ sub setupOrig {
     my $dlvl = "authentication local-users username $user disable";
     my $disable = 'enable';
     $disable = 'disable' if $config->existsOrig("$dlvl");
-    my $ilvl = "authentication local-users username $user static-ip";
-    my $ip = $config->returnOrigValue("$ilvl");
-    $ip = 'none' if (!defined($ip));
-    $self->{_auth_local} = [ @{$self->{_auth_local}}, $user, $pass, $disable, $ip ];
+    $self->{_auth_local} = [ @{$self->{_auth_local}}, $user, $pass, $disable];
   }
 
   my @rservers = $config->listOrigNodes('authentication radius-server');
@@ -356,9 +350,20 @@ sub get_ra_conn {
   return (undef, "Client IP Pool must be defined")
     if (!defined($self->{_client_ip_pool}));
   my $client_ip_pool = $self->{_client_ip_pool};
-  my $auth_str = "  authby=secret\n";
+  my $auth_str;
+  my $auth_mode;
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
+	# auth modes for client
+	if ($self->{_auth_mode} eq 'x509') {
+		$auth_mode = "  rightauth=pubkey";
+	}
+	if ($self->{_auth_mode} eq 'local') {
+		$auth_mode = "  rightauth=eap-mschapv2";
+	}
+	if ($self->{_auth_mode} eq 'radius') {
+		$auth_mode = "  rightauth=eap-radius";
+	}
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
     return (undef, "\"server-cert-file\" not defined")
@@ -372,13 +377,17 @@ EOS
 $cfg_delim_begin
 conn $name
 ${auth_str}
-  keyexchange=ikev2
+${auth_mode}
+  ike=aes256-sha1-modp1024,aes128-sha1-modp1024!
+  esp=aes256-sha1-modp1024,aes128-sha1-modp1024!
   left=$oaddr
   leftsubnet=0.0.0.0/0
   right=%any
   rightsourceip=${client_ip_pool}
   rekey=no
+  mobike=yes
   auto=add
+  keyexchange=ikev2
 EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
@@ -389,52 +398,48 @@ EOS
   return ($str, undef);
 }
 
-sub get_chap_secrets {
+sub get_strongswan_secrets {
   my ($self) = @_;
   return (undef, "Authentication mode must be specified")
     if (!defined($self->{_auth_mode}));
   my @users = @{$self->{_auth_local}};
-  print "L2TP warning: Local user authentication not defined\n"
+  print "IKEv2 VPN warning: Local user authentication not defined\n"
     if ($self->{_auth_mode} eq 'local' && scalar(@users) == 0);
   my $str = $cfg_delim_begin;
   if ($self->{_auth_mode} eq 'local') {
     while (scalar(@users) > 0) {
       my $user = shift @users;
       my $pass = shift @users;
-      my $disable = shift @users;
-      my $ip = shift @users;
+	  my $disable = shift @users;
       if ($disable eq 'disable') {
-        my $cmd = "/opt/vyatta/bin/sudo-users/vyatta-kick-ravpn.pl" . 
-                  " --username=\"$user\" --protocol=\"l2tp\"  2> /dev/null";
-        system ("$cmd");
       } else {
-        if ($ip eq 'none') {
-            $str .= ("\n$user\t" . 'xl2tpd' . "\t\"$pass\"\t" . '*');
-        }
-        else {
-            $str .= ("\n$user\t" . 'xl2tpd' . "\t\"$pass\"\t" . "$ip");
-        }
+        $str .= ("\n$user : EAP \"$pass\"\n");
       }
     }
   }
-  $str .= "\n$cfg_delim_end\n";
+  $str .= $cfg_delim_end . "\n";
   return ($str, undef);
 }
 sub get_strongswan_opts {
   my ($self) = @_;
   my @dns = @{$self->{_dns}};
   my @wins = @{$self->{_wins}};
-  my $sstr = "\n\tdns =" ;
-  foreach my $d (@dns) {
-	$sstr .= (" $d,");
+  my $sstr;
+  if (@dns) {
+	  $sstr .= "\n\tdns =" ;
+	  foreach my $d (@dns) {
+		$sstr .= (" $d,");
+	  }
+	  #delete the last line
+	  chop($sstr);
   }
-  #delete the last line
-  chop($sstr);
-  $sstr .= "\n\tnbns =";
-  foreach my $w (@wins) {
-	$sstr .= (" $w,");
+  if (@wins) {
+	  $sstr .= "\n\tnbns =";
+	  foreach my $w (@wins) {
+		$sstr .= (" $w,");
+	  }
+	  chop($sstr);
   }
-  chop($sstr);
   my $rstr = '';
   $rstr = <<EOS;
 attr {
@@ -444,6 +449,41 @@ attr {
 EOS
 
   return ($rstr, undef);
+}
+
+sub get_strongswan_radius {
+  my ($self) = @_;
+  my $mode = $self->{_auth_mode};
+  return ("$cfg_delim_begin\n$cfg_delim_end\n", undef) if ($mode ne 'radius');
+  
+  my @auths = @{$self->{_auth_radius}};
+  my @skeys = @{$self->{_auth_radius_keys}};
+  return (undef, "No Radius servers specified") if ((scalar @auths) <= 0);
+  return (undef, "Key must be specified for Radius server")
+    if ((scalar @auths) != (scalar @skeys));
+
+  my $authstr = '';
+  my $server_num = 0;
+  while ((scalar @auths) > 0) {
+    
+    my $auth = shift @auths;
+	my $skey = shift @skeys;
+	$authstr .=<<EOS;
+		server${server_num} {
+			address = $auth
+			secret = $skey
+		}
+EOS
+    $server_num++;
+  }
+my $radius_conf =<<EOS;
+eap-radius {
+	servers {
+${authstr}
+	}
+}
+EOS
+  return ($radius_conf, undef);
 }
 
 sub get_radius_conf {
@@ -565,7 +605,6 @@ EOS
   return ($str, undef);
 
 }
-
 
 sub removeCfg {
   my ($self, $file) = @_;

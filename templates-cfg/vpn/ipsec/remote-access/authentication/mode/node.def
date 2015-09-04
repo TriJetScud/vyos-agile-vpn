@@ -1,5 +1,6 @@
 type: txt
 help: Authentication mode for remote access IKEv2 VPN
-syntax:expression: $VAR(@) in "local", "x509"; "Authentication mode must be \"local\" or \"x509\""
+syntax:expression: $VAR(@) in "local", "x509", "radius"; "Authentication mode must be \"local\", \"x509\", \"radius\""
 val_help: local; Use username/password in the configuration
 val_help: x509; Use x509 certificates
+val_help: radius; Use RADIUS
