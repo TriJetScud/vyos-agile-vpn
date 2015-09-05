@@ -24,6 +24,7 @@ my %fields = (
   _out_addr         => undef,
   _dhcp_if          => undef,
   _client_ip_pool   => undef,
+  _client_ip6_pool   => undef,
   _auth_mode        => undef,
   _mtu              => undef,
   _ike_lifetime     => undef,
@@ -72,6 +73,7 @@ sub setup {
 
   $self->{_out_addr} = $config->returnValue('outside-address');
   $self->{_client_ip_pool} = $config->returnValue('client-ip-pool subnet');
+  $self->{_client_ip6_pool} = $config->returnValue('client-ip-pool subnet6');
   $self->{_auth_mode} = $config->returnValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnValue('mtu');
@@ -144,6 +146,7 @@ sub setupOrig {
 
   $self->{_out_addr} = $config->returnOrigValue('outside-address');
   $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool subnet');
+  $self->{_client_ip6_pool} = $config->returnOrigValue('client-ip-pool subnet6');
   $self->{_auth_mode} = $config->returnOrigValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnOrigValue('mtu');
@@ -350,10 +353,14 @@ sub get_ra_conn {
   return (undef, "Client IP Pool must be defined")
     if (!defined($self->{_client_ip_pool}));
   my $client_ip_pool = $self->{_client_ip_pool};
+  my $client_ip6_pool;
   my $auth_str;
   my $auth_mode;
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
+  if (defined($self->{_client_ip6_pool})) {
+    $client_ip6_pool = ",". $self->{_client_ip6_pool};
+  }
 	# auth modes for client
 	if ($self->{_auth_mode} eq 'x509') {
 		$auth_mode = "  rightauth=pubkey";
@@ -383,7 +390,7 @@ ${auth_mode}
   left=$oaddr
   leftsubnet=0.0.0.0/0
   right=%any
-  rightsourceip=${client_ip_pool}
+  rightsourceip=${client_ip_pool}${client_ip6_pool}
   rekey=no
   mobike=yes
   auto=add

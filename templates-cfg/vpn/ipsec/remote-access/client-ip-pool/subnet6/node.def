@@ -1,0 +1,2 @@
+help: An IPv6 prefix where addresses will be assigned from
+type: ipv6net
