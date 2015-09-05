@@ -366,10 +366,10 @@ sub get_ra_conn {
 		$auth_mode = "  rightauth=pubkey";
 	}
 	if ($self->{_auth_mode} eq 'local') {
-		$auth_mode = "  rightauth=eap-mschapv2";
+		$auth_mode = "  rightauth=eap-mschapv2\n  eap_identity=%any";
 	}
 	if ($self->{_auth_mode} eq 'radius') {
-		$auth_mode = "  rightauth=eap-radius";
+		$auth_mode = "  rightauth=eap-radius\n  eap_identity=%any";
 	}
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
