@@ -20,9 +20,6 @@ my $STRONGSWAN_ATTR_CONF = '/etc/strongswan.d/charon/attr.conf';
 my $STRONGSWAN_AGILE_CONF = '/etc/strongswan.d/charon/agile_attr.conf';
 my $STRONGSWAN_RADIUS_CONF = '/etc/strongswan.d/charon/eap-radius.conf';
 my $STRONGSWAN_RADIUS_AGILE_CONF = '/etc/strongswan.d/charon/agile_eap-radius.conf';
-#my $FILE_RADIUS_CONF = '/etc/radiusclient-ng/radiusclient-l2tp.conf';
-#my $FILE_RADIUS_KEYS = '/etc/radiusclient-ng/servers-l2tp';
-#my $FILE_DHCP_HOOK = '/etc/dhcp3/dhclient-exit-hooks.d/l2tpd';
 
 my $gconfig = new Vyatta::Config;
 my $config = new Vyatta::AgileConfig;
@@ -95,8 +92,6 @@ exit 1 if (!$config->removeCfg($FILE_IPSEC_SECRETS));
 exit 1 if (!$config->removeCfg($FILE_IPSEC_RACONN));
 exit 1 if (!$config->removeCfg($STRONGSWAN_AGILE_CONF));
 exit 1 if (!$config->removeCfg($STRONGSWAN_RADIUS_AGILE_CONF));
-#exit 1 if (!$config->removeCfg($FILE_RADIUS_CONF));
-#exit 1 if (!$config->removeCfg($FILE_RADIUS_KEYS));
 
 my $ipsec_cfg = "include $FILE_IPSEC_RACONN";
 exit 1 if (!$config->writeCfg($FILE_IPSEC_CFG, $ipsec_cfg, 1, 1));
@@ -105,8 +100,6 @@ exit 1 if (!$config->writeCfg($FILE_IPSEC_SECRETS, $sswan_users, 1, 0));
 exit 1 if (!$config->writeCfg($FILE_IPSEC_RACONN, $ra_conn, 0, 0));
 exit 1 if (!$config->writeCfg($STRONGSWAN_AGILE_CONF, $sswan_opts, 0, 1));
 exit 1 if (!$config->writeCfg($STRONGSWAN_RADIUS_AGILE_CONF, $sswan_radius, 0, 1));
-#exit 1 if (!$config->writeCfg($FILE_RADIUS_CONF, $radius_conf, 0, 0));
-#exit 1 if (!$config->writeCfg($FILE_RADIUS_KEYS, $radius_keys, 0, 0));
 
 # wait for ipsec to settle
 if (!($config->maybeClustering($gconfig, @ipsec_ifs))) {
