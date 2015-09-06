@@ -485,6 +485,7 @@ EOS
   }
 my $radius_conf =<<EOS;
 eap-radius {
+	load = yes
 	servers {
 ${authstr}
 	}
