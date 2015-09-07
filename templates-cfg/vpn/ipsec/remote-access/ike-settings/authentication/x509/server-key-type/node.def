@@ -1,0 +1,6 @@
+type: txt
+default: "rsa"
+help: Sets the type of the server's private key
+syntax:expression: $VAR(@) in "rsa", "ecdsa"
+val_help: rsa; Server key type is RSA
+val_help: ecdsa; Server key type is ECDSA

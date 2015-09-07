@@ -21,10 +21,11 @@ my %fields = (
   _x509_s_cert      => undef,
   _x509_s_key       => undef,
   _x509_s_pass      => undef,
+  _x509_t_key       => undef,
   _out_addr         => undef,
   _dhcp_if          => undef,
   _client_ip_pool   => undef,
-  _client_ip6_pool   => undef,
+  _client_ip6_pool  => undef,
   _auth_mode        => undef,
   _mtu              => undef,
   _ike_lifetime     => undef,
@@ -70,7 +71,8 @@ sub setup {
   $self->{_x509_s_cert} = $config->returnValue("$pfx server-cert-file");
   $self->{_x509_s_key} = $config->returnValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnValue("$pfx server-key-password");
-
+  $self->{_x509_t_key} = $config->returnValue("$pfx server-key-type");
+  
   $self->{_out_addr} = $config->returnValue('outside-address');
   $self->{_client_ip_pool} = $config->returnValue('client-ip-pool subnet');
   $self->{_client_ip6_pool} = $config->returnValue('client-ip-pool subnet6');
@@ -143,7 +145,8 @@ sub setupOrig {
   $self->{_x509_s_cert} = $config->returnOrigValue("$pfx server-cert-file");
   $self->{_x509_s_key} = $config->returnOrigValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnOrigValue("$pfx server-key-password");
-
+  $self->{_x509_t_key} = $config->returnOrigValue("$pfx server-key-type");
+  
   $self->{_out_addr} = $config->returnOrigValue('outside-address');
   $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool subnet');
   $self->{_client_ip6_pool} = $config->returnOrigValue('client-ip-pool subnet6');
@@ -223,6 +226,7 @@ sub isDifferentFrom {
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
   return 1 if ($this->{_x509_s_pass} ne $that->{_x509_s_pass});
+  return 1 if ($this->{_x509_t_key} ne $that->{_x509_t_key});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
   return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
@@ -252,6 +256,7 @@ sub needsRestart {
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
   return 1 if ($this->{_x509_s_pass} ne $that->{_x509_s_pass});
+  return 1 if ($this->{_x509_t_key} ne $that->{_x509_t_key});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
   return 1 if ($this->{_out_nexthop} ne $that->{_out_nexthop});
@@ -315,13 +320,20 @@ sub get_ipsec_secrets {
   # X509
   my $key_file = $self->{_x509_s_key};
   my $key_pass = $self->{_x509_s_pass};
+  my $key_type = $self->{_x509_t_key};
+  my $key_str;
   return (undef, "\"server-key-file\" not defined")
     if (!defined($key_file));
+  if ($key_type eq 'ecdsa') {
+	$key_str = 'ECDSA';
+  } else {
+	$key_str = 'RSA';
+  }
   my $pstr = (defined($key_pass) ? " \"$key_pass\"" : '');
   $key_file =~ s/^.*(\/[^\/]+)$/${SERVER_KEY_PATH}$1/;
   my $str =<<EOS;
 $cfg_delim_begin
-: RSA ${key_file}$pstr
+: ${key_str} ${key_file}$pstr
 $cfg_delim_end
 EOS
     return ($str, undef);
