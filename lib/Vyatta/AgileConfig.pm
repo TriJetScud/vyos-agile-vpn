@@ -30,6 +30,7 @@ my %fields = (
   _mtu              => undef,
   _ike_lifetime     => undef,
   _auth_require     => undef,
+  _fragmentation    => undef,
   _auth_local       => [],
   _auth_radius      => [],
   _auth_radius_keys => [],
@@ -64,6 +65,7 @@ sub setup {
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
   # hard code this to x509 for now
   $self->{_mode} = 'x509';
+  $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnValue("$pfx ca-cert-file");
@@ -135,10 +137,9 @@ sub setupOrig {
     $self->{_is_empty} = 0;
   }
   $self->{_dhcp_if} = $config->returnOrigValue('dhcp-interface');
-  $self->{_mode} = $config->returnOrigValue(
-                            'ike-settings authentication mode');
-  $self->{_ike_lifetime} = $config->returnOrigValue(
-                            'ike-settings ike-lifetime');
+  $self->{_mode} = 'x509';
+  $self->{_fragmentation} = $config->returnOrigValue('ike-settings fragmentation');
+  $self->{_ike_lifetime} = $config->returnOrigValue('ike-settings ike-lifetime');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnOrigValue("$pfx ca-cert-file");
   $self->{_x509_crl} = $config->returnOrigValue("$pfx crl-file");
@@ -383,6 +384,10 @@ sub get_ra_conn {
 	if ($self->{_auth_mode} eq 'radius') {
 		$auth_mode = "  rightauth=eap-radius\n  eap_identity=%any";
 	}
+  my $fragmentation;
+  if (defined($self->{_fragmentation}) && $_self->{_fragmentation} eq 'enable') {
+     $fragmentation = "  fragmentation=yes\n";
+  }
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
     return (undef, "\"server-cert-file\" not defined")
@@ -397,10 +402,10 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256-sha1-modp1024,aes128-sha1-modp1024!
-  esp=aes256-sha1-modp1024,aes128-sha1-modp1024!
+  ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
+  esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
   left=$oaddr
-  leftsubnet=0.0.0.0/0
+${fragmentation}leftsubnet=0.0.0.0/0
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   rekey=no

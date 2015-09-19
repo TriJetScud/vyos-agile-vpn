@@ -1,0 +1,6 @@
+help: Enable IKEv2 Fragmentation Extension as defined in RFC 7383 
+type: txt
+default: "disable"
+syntax:expression: $VAR(@) in "enable", "disable"; "must be enabled or disabled"
+val_help: enable; Enable Fragmentation
+val_help: disable; Disable Fragmentation (default)
