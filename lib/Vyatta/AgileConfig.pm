@@ -405,7 +405,7 @@ ${auth_mode}
   ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
   esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
   left=$oaddr
-${fragmentation}leftsubnet=0.0.0.0/0
+${fragmentation}  leftsubnet=0.0.0.0/0
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   rekey=no
