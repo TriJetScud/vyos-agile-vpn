@@ -385,7 +385,7 @@ sub get_ra_conn {
 		$auth_mode = "  rightauth=eap-radius\n  eap_identity=%any";
 	}
   my $fragmentation;
-  if (defined($self->{_fragmentation}) && $_self->{_fragmentation} eq 'enable') {
+  if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes\n";
   }
   if ($self->{_mode} eq 'x509') {
