@@ -1,3 +1,10 @@
+vyos-vpn-agile (0.1.1) UNRELEASED; urgency=low
+
+  * Add an aes256-sha1 without a PFS group [b8a775]
+  * Use swanctl to reload if it exists on the system [c6179e]
+
+ -- Jeff Leung <jleung@v10networks.ca>  Mon, 05 Oct 2015 20:00:00 +0000
+
 vyos-vpn-agile (0.1) UNRELEASED; urgency=low
 
   * Initial Packaging
