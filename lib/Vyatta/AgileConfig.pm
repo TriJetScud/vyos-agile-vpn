@@ -402,8 +402,8 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
-  esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024!
+  ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
+  esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
   left=$oaddr
 ${fragmentation}  leftsubnet=0.0.0.0/0
   right=%any
