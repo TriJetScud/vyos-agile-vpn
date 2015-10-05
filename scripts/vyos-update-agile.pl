@@ -119,6 +119,9 @@ if (!($config->isDifferentFrom($oconfig))) {
 } else {
   system ("ipsec rereadall >&/dev/null");
   system ("ipsec reload >&/dev/null");
+  if (-f '/usr/sbin/swanctl') {
+    system ("swanctl -r >&/dev/null");
+  }
 }
 
 exit 0;
