@@ -1,0 +1,3 @@
+help: Internet Key Exchange (IKE) group name [REQUIRED]
+type:  txt
+allowed: cli-shell-api listActiveNodes vpn ipsec ike-group
