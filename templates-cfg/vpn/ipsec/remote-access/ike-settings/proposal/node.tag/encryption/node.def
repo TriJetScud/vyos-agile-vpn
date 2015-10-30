@@ -1,0 +1,7 @@
+help: Encryption algorithm
+type: txt
+default: "aes128"
+syntax:expression: $VAR(@) in "aes128", "aes256", "3des"; "must be aes128, or aes256, or 3des"
+val_help: aes128; AES-128 encryption (default)
+val_help: aes256; AES-256 encryption
+val_help: 3des; 3DES encryption

@@ -29,6 +29,8 @@ my %fields = (
   _auth_mode        => undef,
   _mtu              => undef,
   _ike_lifetime     => undef,
+  _ike_group        => undef,
+  _esp_group        => undef,
   _auth_require     => undef,
   _fragmentation    => undef,
   _auth_local       => [],
@@ -67,6 +69,8 @@ sub setup {
   $self->{_mode} = 'x509';
   $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
+  $self->{_ike_group} = $config->returnValue('ike-settings proposal 1 encryption');
+  $self->{_esp_group} = $config->returnValue('esp-settings proposal 1 encryption');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnValue("$pfx ca-cert-file");
   $self->{_x509_crl} = $config->returnValue("$pfx crl-file");
@@ -140,6 +144,8 @@ sub setupOrig {
   $self->{_mode} = 'x509';
   $self->{_fragmentation} = $config->returnOrigValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnOrigValue('ike-settings ike-lifetime');
+  $self->{_ike_group} = $config->returnOrigValue('ike-settings proposal 1 encryption');
+  $self->{_esp_group} = $config->returnOrigValue('esp-settings proposal 1 encryption');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnOrigValue("$pfx ca-cert-file");
   $self->{_x509_crl} = $config->returnOrigValue("$pfx crl-file");
@@ -369,8 +375,16 @@ sub get_ra_conn {
   my $client_ip6_pool;
   my $auth_str;
   my $auth_mode;
+  my $esp_str;
+  my $ike_str;
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
+  return (undef, "IPSec IKE proposals not defined")
+    if (!defined($self->{_ike_group}));
+  return (undef, "IPSec ESP proposals not defined")
+    if (!defined($self->{_esp_group}));
+  $ike_str = get_ike_proposals();
+  $esp_str = get_esp_proposals();
   if (defined($self->{_client_ip6_pool})) {
     $client_ip6_pool = ",". $self->{_client_ip6_pool};
   }
@@ -402,8 +416,8 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
-  esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
+  ike=${ike_str}!
+  esp=${esp_str}!
   left=$oaddr
 ${fragmentation}  leftsubnet=0.0.0.0/0
   right=%any
@@ -582,6 +596,137 @@ sub print_str {
   $str .= "\n";
 
   return $str;
+}
+
+sub get_ike_proposals {
+    #
+    # Write IKE configuration from group
+    #
+	my $genout;
+    my $vcVPN = new Vyatta::Config();
+    $vcVPN->setLevel('vpn ipsec remote-access');
+	my @ike_proposals = $vcVPN->listNodes("ike-settings proposal");
+
+	my $first_ike_proposal = 1;
+	foreach my $ike_proposal (@ike_proposals) {
+
+		#
+		# Get encryption, hash & Diffie-Hellman  key size
+		#
+		my $encryption = $vcVPN->returnValue("ike-settings proposal $ike_proposal encryption");
+		my $hash = $vcVPN->returnValue("ike-settings proposal $ike_proposal hash");
+		my $dh_group = $vcVPN->returnValue("ike-settings proposal $ike_proposal dh-group");
+
+		#
+		# Write separator if not first proposal
+		#
+		if ($first_ike_proposal) {
+			$first_ike_proposal = 0;
+		} else {
+			$genout .= ",";
+		}
+
+		#
+		# Write values
+		#
+		if (defined($encryption) && defined($hash)) {
+			$genout .= "$encryption-$hash";
+			if (defined($dh_group)) {
+				my $cipher_out = get_dh_cipher_result($dh_group);
+				if ($cipher_out eq 'unknown') {
+					return undef;
+				} else {
+					$genout .= "-$cipher_out";
+				}
+			}
+		}
+	}
+    return $genout;
+}
+
+sub get_esp_proposals {
+	my $genout;
+    $vcVPN = new Vyatta::Config();
+    $vcVPN->setLevel('vpn ipsec remote-access');
+	my @esp_proposals =$vcVPN->listNodes("esp-settings proposal");
+	my $first_esp_proposal = 1;
+	foreach my $esp_proposal (@esp_proposals) {
+
+		#
+		# Get encryption, hash and PFS group settings
+		#
+		my $encryption = $vcVPN->returnValue("esp-settings proposal $esp_proposal encryption");
+		my $hash = $vcVPN->returnValue("esp-settings proposal $esp_proposal hash");
+		my $pfs = $vcVPN->returnValue("esp-settings proposal $esp_proposal dh-group");
+
+		#
+		# Write separator if not first proposal
+		#
+		if ($first_esp_proposal) {
+			$first_esp_proposal = 0;
+		} else {
+			$genout .= ",";
+		}
+		if (defined($pfs)) {
+			if ($pfs eq 'enable') {
+				undef $pfs;
+			} elsif ($pfs eq 'disable') {
+				undef $pfs;
+			} else {
+				$pfs = get_dh_cipher_result($pfs);
+			}
+		}
+
+		#
+		# Write values
+		#
+		if (defined($encryption) && defined($hash)) {
+			$genout .= "$encryption-$hash";
+			if (defined($pfs)) {
+				$genout .= "-$pfs";
+			}
+		}
+	}
+	return $genout;
+}
+
+sub get_dh_cipher_result { 
+    my ($cipher) = @_;
+    my $ciph_out;
+    if ($cipher eq '2' || $cipher eq 'dh-group2') {
+        $ciph_out = 'modp1024';
+    } elsif ($cipher eq '5' || $cipher eq 'dh-group5') {
+        $ciph_out = 'modp1536';
+    } elsif ($cipher eq '14' || $cipher eq 'dh-group14') {
+        $ciph_out = 'modp2048';
+    } elsif ($cipher eq '15' || $cipher eq 'dh-group15') {
+        $ciph_out = 'modp3072';
+    } elsif ($cipher eq '16' || $cipher eq 'dh-group16') {
+        $ciph_out = 'modp4096';
+    } elsif ($cipher eq '17' || $cipher eq 'dh-group17') {
+        $ciph_out = 'modp6144';
+    } elsif ($cipher eq '18' || $cipher eq 'dh-group18') {
+        $ciph_out = 'modp8192';
+    } elsif ($cipher eq '19' || $cipher eq 'dh-group19') {
+        $ciph_out = 'ecp256';
+    } elsif ($cipher eq '20' || $cipher eq 'dh-group20') {
+        $ciph_out = 'ecp384';
+    } elsif ($cipher eq '21' || $cipher eq 'dh-group21') {
+        $ciph_out = 'ecp521';
+    } elsif ($cipher eq '22' || $cipher eq 'dh-group22') {
+        $ciph_out = 'modp1024s160';
+    } elsif ($cipher eq '23' || $cipher eq 'dh-group23') {
+        $ciph_out = 'modp2048s224';
+    } elsif ($cipher eq '24' || $cipher eq 'dh-group24') {
+        $ciph_out = 'modp2048s256';
+    } elsif ($cipher eq '25' || $cipher eq 'dh-group25') {
+        $ciph_out = 'ecp192';
+    } elsif ($cipher eq '26' || $cipher eq 'dh-group26') {
+        $ciph_out = 'ecp224';
+    } else {
+        $ciph_out = 'unknown';
+    }
+    return $ciph_out;
 }
 
 1;
