@@ -1,0 +1,8 @@
+help: Encryption algorithm
+type: txt
+default: "aes256"
+syntax:expression: $VAR(@) in "aes128", "aes128gcm", "aes256", "aes256gcm"; "must be aes128, aes128gcm, aes256 or aes256gcm"
+val_help: aes128; AES-128-CBC encryption
+val_help: aes128gcm; AES-128-GCM encryption
+val_help: aes256; AES-256-CBC encryption (default)
+val_help: aes256gcm; AES-256-GCM encryption

@@ -1,0 +1,6 @@
+tag:
+type: u32
+help: ESP-group proposal [REQUIRED]
+syntax:expression: ($VAR(@) >= 1 && $VAR(@) <= 65535) ; "must be between 1-65535"
+val_help: u32:1-65535; ESP-group proposal number
+

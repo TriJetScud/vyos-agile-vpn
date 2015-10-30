@@ -1,0 +1,6 @@
+tag:
+help: IKE-group proposal [REQUIRED]
+type: u32
+syntax:expression: ($VAR(@) >= 1 && $VAR(@) <= 65535) ; "must be between 1-65535"
+val_help: u32:1-65535; IKE-group proposal
+

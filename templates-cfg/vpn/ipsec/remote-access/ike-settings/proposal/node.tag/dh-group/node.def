@@ -1,0 +1,18 @@
+help: Diffie-Hellman (DH) key exchange group
+type: u32
+syntax:expression: ($VAR(@) == 2 || $VAR(@) == 5 || ($VAR(@) >= 14 && $VAR(@) <= 26)); "must be 2, 5 or 14 through 26"
+val_help: 2; DH group 2 (modp1024)
+val_help: 5; DH group 5 (modp1536)
+val_help: 14; DH group 14 (modp2048)
+val_help: 15; DH group 15 (modp3072)
+val_help: 16; DH group 16 (modp4096)
+val_help: 17; DH group 17 (modp6144)
+val_help: 18; DH group 18 (modp8192)
+val_help: 19; DH group 19 (ecp256)
+val_help: 20; DH group 20 (ecp384)
+val_help: 21; DH group 21 (ecp521)
+val_help: 22; DH group 22 (modp1024s160)
+val_help: 23; DH group 23 (modp2048s224)
+val_help: 24; DH group 24 (modp2048s256)
+val_help: 25; DH group 25 (ecp192)
+val_help: 26; DH group 26 (ecp224)
