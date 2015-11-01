@@ -22,6 +22,7 @@ my %fields = (
   _x509_s_key       => undef,
   _x509_s_pass      => undef,
   _x509_t_key       => undef,
+  _x509_s_id        => undef,
   _out_addr         => undef,
   _dhcp_if          => undef,
   _client_ip_pool   => undef,
@@ -74,6 +75,7 @@ sub setup {
   $self->{_x509_s_key} = $config->returnValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnValue("$pfx server-key-password");
   $self->{_x509_t_key} = $config->returnValue("$pfx server-key-type");
+  $self->{_x509_s_id} = $config->returnValue("$pfx server-id");
   
   $self->{_out_addr} = $config->returnValue('outside-address');
   $self->{_client_ip_pool} = $config->returnValue('client-ip-pool subnet');
@@ -147,6 +149,7 @@ sub setupOrig {
   $self->{_x509_s_key} = $config->returnOrigValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnOrigValue("$pfx server-key-password");
   $self->{_x509_t_key} = $config->returnOrigValue("$pfx server-key-type");
+  $self->{_x509_t_id} = $config->returnOrigValue("$pfx server-id");
   
   $self->{_out_addr} = $config->returnOrigValue('outside-address');
   $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool subnet');
@@ -369,6 +372,7 @@ sub get_ra_conn {
   my $client_ip6_pool;
   my $auth_str;
   my $auth_mode;
+  my $server_id;
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
   if (defined($self->{_client_ip6_pool})) {
@@ -388,6 +392,9 @@ sub get_ra_conn {
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes\n";
   }
+  if (defined($self->{_x509_s_id})) {
+     $server_id = "\n  leftid=" . $self->{_x509_s_id};
+  }
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
     return (undef, "\"server-cert-file\" not defined")
@@ -404,7 +411,7 @@ ${auth_str}
 ${auth_mode}
   ike=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
   esp=aes256-sha1-modp2048,aes256-sha1-modp1024,aes128-sha1-modp2048,aes128-sha1-modp1024,aes256-sha1!
-  left=$oaddr
+  left=$oaddr${server_id}
 ${fragmentation}  leftsubnet=0.0.0.0/0
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
