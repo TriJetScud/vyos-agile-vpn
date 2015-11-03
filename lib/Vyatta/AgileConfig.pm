@@ -653,7 +653,7 @@ sub get_ike_proposals {
 
 sub get_esp_proposals {
 	my $genout;
-    $vcVPN = new Vyatta::Config();
+    my $vcVPN = new Vyatta::Config();
     $vcVPN->setLevel('vpn ipsec remote-access');
 	my @esp_proposals =$vcVPN->listNodes("esp-settings proposal");
 	my $first_esp_proposal = 1;
