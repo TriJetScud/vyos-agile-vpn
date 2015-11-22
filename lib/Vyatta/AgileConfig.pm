@@ -32,6 +32,7 @@ my %fields = (
   _ike_lifetime     => undef,
   _ike_group        => undef,
   _esp_group        => undef,
+  _inactivity       => undef,
   _auth_require     => undef,
   _fragmentation    => undef,
   _auth_local       => [],
@@ -68,6 +69,7 @@ sub setup {
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
   # hard code this to x509 for now
   $self->{_mode} = 'x509';
+  $self->{_inactivity} = $config->returnValue('inactivity');
   $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
   $self->{_ike_group} = $config->returnValue('ike-settings proposal 1 encryption');
@@ -144,6 +146,7 @@ sub setupOrig {
   }
   $self->{_dhcp_if} = $config->returnOrigValue('dhcp-interface');
   $self->{_mode} = 'x509';
+  $self->{_inactivity} = $config->returnOrigValue('inactivity');
   $self->{_fragmentation} = $config->returnOrigValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnOrigValue('ike-settings ike-lifetime');
   $self->{_ike_group} = $config->returnOrigValue('ike-settings proposal 1 encryption');
@@ -438,6 +441,11 @@ EOS
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
   } else {
     $str .= "  ikelifetime=3600s\n";
+  }
+  if (defined($self->{_inactivity})) {
+    $str .= "  inactivity=" . $self->{_inactivity} . "\n";
+  } else {
+    $str .= "  inactivity=28800s\n";
   }
   $str .= "$cfg_delim_end\n";
   return ($str, undef);
