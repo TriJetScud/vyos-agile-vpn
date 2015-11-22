@@ -1,0 +1,5 @@
+help: Defines an interval on which the connection is closed if there is no data being transmitted between the gateway and client. Default interval is 8 hours. 
+type: u32 
+default: 28800
+syntax:expression: ($VAR(@) >= 10 && $VAR(@) <= 86400) ; "must between 10-86400 seconds"
+val_help: u32:10-86400; Timeout in seconds (default 28800)
