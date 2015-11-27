@@ -371,7 +371,7 @@ sub get_ra_conn {
 	return (undef, "The options dhcp-interface and outside-address may not be defined together. Please use either dhcp-interface or outside-address");
   }
   # use strongSwan's %defaultroute macro if outside address is set to 0.0.0.0
-  if ($self->{_out_addr} == "0.0.0.0") {
+  if (defined($self->{_out_addr}) && $self->{_out_addr} == "0.0.0.0") {
 	$oaddr = "%defaultroute";
   }
   return (undef, "Outside address not defined") if (!defined($oaddr));

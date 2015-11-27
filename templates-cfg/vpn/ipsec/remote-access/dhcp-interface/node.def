@@ -1,0 +1,6 @@
+type: txt
+help: DHCP interface to listen on
+allowed:
+         local -a array ;
+         array=( /var/run/eth* /var/run/br* /var/run/bond* ) ;
+         echo  -n ${array[@]##*/}
