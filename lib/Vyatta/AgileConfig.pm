@@ -367,6 +367,9 @@ sub get_ra_conn {
     my $dhcpif = $self->{_dhcp_if};
     $oaddr = get_dhcp_addr($dhcpif);
   }
+  if (defined($self->{_dhcp_if}) && defined($self->{_out_addr})) {
+	return (undef, "The options dhcp-interface and outside-address may not be defined together. Please use either dhcp-interface or outside-address");
+  }
   # use strongSwan's %defaultroute macro if outside address is set to 0.0.0.0
   if ($self->{_out_addr} == "0.0.0.0") {
 	$oaddr = "%defaultroute";
