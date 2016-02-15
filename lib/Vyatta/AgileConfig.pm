@@ -396,7 +396,7 @@ sub get_ra_conn {
      $fragmentation = "  fragmentation=yes\n";
   }
   if (defined($self->{_x509_s_id})) {
-     $server_id = "\n  leftid=" . $self->{_x509_s_id};
+     $server_id = "\n  leftid=@" . $self->{_x509_s_id} . "\n  rightid=*@" . $self->{_x509_s_id};
   }
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
@@ -405,6 +405,7 @@ sub get_ra_conn {
     $server_cert =~ s/^.*(\/[^\/]+)$/${SERVER_CERT_PATH}$1/;
     $auth_str =<<EOS
   leftcert=$server_cert
+  leftsendcert=always
 EOS
   }
   my $str =<<EOS;
