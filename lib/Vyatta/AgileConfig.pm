@@ -396,13 +396,13 @@ sub get_ra_conn {
 	}
   my $fragmentation;
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
-     $fragmentation = "  fragmentation=yes\n";
+     $fragmentation = "  fragmentation=yes";
   }
   if (defined($self->{_x509_l_id})) {
      $server_id = "  leftid=" . $self->{_x509_l_id}. "\n";
   }
   if (defined($self->{_x509_r_id})) {
-     $server_id = $server_id . " rightid=" . $self->{_x509_r_id} . "\n";
+     $server_id = $server_id . "  rightid=" . $self->{_x509_r_id};
   }
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
@@ -422,8 +422,8 @@ ${auth_mode}
   ike=aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1!
   esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn!
   left=$oaddr
-  ${server_id}
-  ${fragmentation}
+${server_id}
+${fragmentation}
   leftsubnet=0.0.0.0/0,::/0
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
