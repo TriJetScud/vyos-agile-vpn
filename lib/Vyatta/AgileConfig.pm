@@ -22,7 +22,8 @@ my %fields = (
   _x509_s_key       => undef,
   _x509_s_pass      => undef,
   _x509_t_key       => undef,
-  _x509_s_id        => undef,
+  _x509_r_id        => undef,
+  _x509_l_id        => undef,
   _out_addr         => undef,
   _dhcp_if          => undef,
   _client_ip_pool   => undef,
@@ -77,7 +78,8 @@ sub setup {
   $self->{_x509_s_key} = $config->returnValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnValue("$pfx server-key-password");
   $self->{_x509_t_key} = $config->returnValue("$pfx server-key-type");
-  $self->{_x509_s_id} = $config->returnValue("$pfx server-id");
+  $self->{_x509_l_id} = $config->returnValue("$pfx local-id");
+  $self->{_x509_r_id} = $config->returnValue("$pfx remote-id");
   
   $self->{_out_addr} = $config->returnValue('outside-address');
   $self->{_client_ip_pool} = $config->returnValue('client-ip-pool subnet');
@@ -152,7 +154,8 @@ sub setupOrig {
   $self->{_x509_s_key} = $config->returnOrigValue("$pfx server-key-file");
   $self->{_x509_s_pass} = $config->returnOrigValue("$pfx server-key-password");
   $self->{_x509_t_key} = $config->returnOrigValue("$pfx server-key-type");
-  $self->{_x509_t_id} = $config->returnOrigValue("$pfx server-id");
+  $self->{_x509_l_id} = $config->returnOrigValue("$pfx local-id");
+  $self->{_x509_r_id} = $config->returnOrigValue("$pfx remote-id");
   
   $self->{_out_addr} = $config->returnOrigValue('outside-address');
   $self->{_client_ip_pool} = $config->returnOrigValue('client-ip-pool subnet');
@@ -395,8 +398,11 @@ sub get_ra_conn {
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes\n";
   }
-  if (defined($self->{_x509_s_id})) {
-     $server_id = "\n  leftid=@" . $self->{_x509_s_id} . "\n  rightid=*@" . $self->{_x509_s_id};
+  if (defined($self->{_x509_l_id})) {
+     $server_id = "  leftid=" . $self->{_x509_l_id}. "\n";
+  }
+  if (defined($self->{_x509_r_id})) {
+     $server_id = $server_id . " rightid=" . $self->{_x509_r_id} . "\n";
   }
   if ($self->{_mode} eq 'x509') {
     my $server_cert = $self->{_x509_s_cert};
@@ -415,8 +421,10 @@ ${auth_str}
 ${auth_mode}
   ike=aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1!
   esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn!
-  left=$oaddr${server_id}
-${fragmentation}  leftsubnet=0.0.0.0/0,::/0
+  left=$oaddr
+  ${server_id}
+  ${fragmentation}
+  leftsubnet=0.0.0.0/0,::/0
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   rekey=no
