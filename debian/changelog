@@ -1,3 +1,10 @@
+vyos-vpn-agile (0.1.2) UNRELEASED; urgency=low
+
+  * Add smarter defaults for proposals
+  * Ensure that a default route is sent for ipv6 too
+  * Allow the user to configure leftid/rightid
+  * Always send the x509 certificate (IOS compatibility)
+
 vyos-vpn-agile (0.1.1) UNRELEASED; urgency=low
 
   * Add an aes256-sha1 without a PFS group [b8a775]
