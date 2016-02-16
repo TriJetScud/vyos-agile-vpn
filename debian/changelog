@@ -1,9 +1,19 @@
+vyos-vpn-agile (0.1.3) UNRELEASED; urgency=low
+
+  * Set leftfirewall=yes to ensure it 'just works'
+  * Fix a minor bug where the daemon might not
+ be restarted if the local/remote IDs change
+
+ -- Florent Daigniere <nextgens@freenetproject.org>  Mon, 16 Feb 2016 20:00:00 +0000
+
 vyos-vpn-agile (0.1.2) UNRELEASED; urgency=low
 
   * Add smarter defaults for proposals
   * Ensure that a default route is sent for ipv6 too
   * Allow the user to configure leftid/rightid
   * Always send the x509 certificate (IOS compatibility)
+
+ -- Florent Daigniere <nextgens@freenetproject.org>  Mon, 15 Feb 2016 20:00:00 +0000
 
 vyos-vpn-agile (0.1.1) UNRELEASED; urgency=low
 
