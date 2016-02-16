@@ -237,6 +237,8 @@ sub isDifferentFrom {
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
   return 1 if ($this->{_x509_s_pass} ne $that->{_x509_s_pass});
   return 1 if ($this->{_x509_t_key} ne $that->{_x509_t_key});
+  return 1 if ($this->{_x509_l_id} ne $that->{_x509_l_id});
+  return 1 if ($this->{_x509_r_id} ne $that->{_x509_r_id});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
   return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
@@ -267,6 +269,8 @@ sub needsRestart {
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
   return 1 if ($this->{_x509_s_pass} ne $that->{_x509_s_pass});
   return 1 if ($this->{_x509_t_key} ne $that->{_x509_t_key});
+  return 1 if ($this->{_x509_l_id} ne $that->{_x509_l_id});
+  return 1 if ($this->{_x509_r_id} ne $that->{_x509_r_id});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
   return 1 if ($this->{_out_nexthop} ne $that->{_out_nexthop});
