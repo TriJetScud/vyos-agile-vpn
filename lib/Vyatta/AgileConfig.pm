@@ -430,6 +430,7 @@ ${server_id}
 ${fragmentation}
   leftsubnet=0.0.0.0/0,::/0
   leftfirewall=yes
+  lefthostaccess=yes
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   rekey=no
