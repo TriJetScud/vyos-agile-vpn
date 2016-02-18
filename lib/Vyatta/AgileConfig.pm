@@ -34,6 +34,7 @@ my %fields = (
   _inactivity       => undef,
   _auth_require     => undef,
   _fragmentation    => undef,
+  _compat           => undef,
   _auth_local       => [],
   _auth_radius      => [],
   _auth_radius_keys => [],
@@ -66,10 +67,11 @@ sub setup {
     $self->{_is_empty} = 0;
   }
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
+  $self->{_compat} = $config->returnValue('compatibility-mode');
   # hard code this to x509 for now
   $self->{_mode} = 'x509';
-  $self->{_inactivity} = $config->returnValue('inactivity');
   $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
+  $self->{_inactivity} = $config->returnValue('inactivity');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnValue("$pfx ca-cert-file");
@@ -143,6 +145,7 @@ sub setupOrig {
     $self->{_is_empty} = 0;
   }
   $self->{_dhcp_if} = $config->returnOrigValue('dhcp-interface');
+  $self->{_compat} = $config->returnOrigValue('compatibility-mode');
   $self->{_mode} = 'x509';
   $self->{_inactivity} = $config->returnOrigValue('inactivity');
   $self->{_fragmentation} = $config->returnOrigValue('ike-settings fragmentation');
@@ -230,6 +233,7 @@ sub isDifferentFrom {
 
   return 1 if ($this->{_is_empty} ne $that->{_is_empty});
   return 1 if ($this->{_mode} ne $that->{_mode});
+  return 1 if ($this->{_compat} ne $that->{_compat});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
   return 1 if ($this->{_x509_crl} ne $that->{_x509_crl});
@@ -261,6 +265,7 @@ sub needsRestart {
   my ($this, $that) = @_;
 
   return 1 if ($this->{_is_empty} ne $that->{_is_empty});
+  return 1 if ($this->{_compat} ne $that->{_compat});
   return 1 if ($this->{_mode} ne $that->{_mode});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
@@ -402,6 +407,10 @@ sub get_ra_conn {
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes";
   }
+  my $compat;
+  if (!defined($self->{_compat}) || $self->{_compat} eq 'disable') {
+     $compat = "!";
+  }
   if (defined($self->{_x509_l_id})) {
      $server_id = "  leftid=" . $self->{_x509_l_id}. "\n";
   }
@@ -423,8 +432,8 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256gcm128,aes128gcm128,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1!
-  esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn!
+  ike=aes256gcm128,aes128gcm128,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
+  esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn${compat}
   left=$oaddr
 ${server_id}
 ${fragmentation}

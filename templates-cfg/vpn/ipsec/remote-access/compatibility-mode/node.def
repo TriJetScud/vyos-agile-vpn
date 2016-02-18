@@ -1,0 +1,6 @@
+help: Enable compatibility mode. If enabled, the proposals negotiated might include unsafe/legacy ciphers and might not provide Forward Secrecy
+type: txt
+default: "disable"
+syntax:expression: $VAR(@) in "enable", "disable"; "must be enabled or disabled"
+val_help: enable; Enable compatiblity mode (potentially insecure)
+val_help: disable; Disable compatiblity mode (default)
