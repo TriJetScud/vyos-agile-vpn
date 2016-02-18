@@ -443,6 +443,7 @@ ${fragmentation}
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   mobike=yes
+  rekey=no
   auto=add
   keyexchange=ikev2
 EOS

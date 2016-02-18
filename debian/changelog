@@ -1,3 +1,9 @@
+vyos-vpn-agile (0.1.6) UNRELEASED; urgency=low
+
+  * disable rekeying; it just doesn't work.
+
+ -- Florent Daigniere <nextgens@freenetproject.org>  Mon, 18 Feb 2016 21:00:00 +0000
+
 vyos-vpn-agile (0.1.5) UNRELEASED; urgency=low
 
   * Re-enable rekeying; The new default is a IKE lifetime of 1d and an
