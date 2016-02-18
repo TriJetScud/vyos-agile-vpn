@@ -1,5 +1,5 @@
 help: IKE lifetime
 type: u32 
-default: 3600
-syntax:expression: ($VAR(@) >= 30 && $VAR(@) <= 86400) ; "must between 30-86400 seconds"
-val_help: u32:30-86400; IKE lifetime in seconds (default 3600)
+default: 86400
+syntax:expression: ($VAR(@) >= 30) ; "must between over 30 seconds"
+val_help: u32:30-86400; IKE lifetime in seconds (default 86400)

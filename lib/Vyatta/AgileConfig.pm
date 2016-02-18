@@ -433,7 +433,6 @@ ${fragmentation}
   lefthostaccess=yes
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
-  rekey=no
   mobike=yes
   auto=add
   keyexchange=ikev2
@@ -441,7 +440,7 @@ EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
   } else {
-    $str .= "  ikelifetime=3600s\n";
+    $str .= "  ikelifetime=86400s\n";
   }
   if (defined($self->{_inactivity})) {
     $str .= "  inactivity=" . $self->{_inactivity} . "\n";
