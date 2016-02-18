@@ -423,7 +423,7 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1!
+  ike=aes256gcm128,aes128gcm128,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1!
   esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn!
   left=$oaddr
 ${server_id}
