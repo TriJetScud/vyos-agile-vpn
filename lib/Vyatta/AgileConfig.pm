@@ -432,8 +432,8 @@ $cfg_delim_begin
 conn $name
 ${auth_str}
 ${auth_mode}
-  ike=aes256gcm128,aes128gcm128,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
-  esp=aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn${compat}
+  ike=aes256gcm128-aes128gcm128-ecp384-ecp256-prfsha384-prfsha256,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
+  esp=aes256gcm128-ecp384-ecp256-esn-noesn,aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn${compat}
   left=$oaddr
 ${server_id}
 ${fragmentation}
