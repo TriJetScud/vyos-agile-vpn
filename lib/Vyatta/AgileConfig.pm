@@ -425,15 +425,15 @@ sub get_ra_conn {
     $auth_str =<<EOS
   leftcert=$server_cert
   leftsendcert=always
+  leftauth=pubkey
 EOS
   }
   my $str =<<EOS;
 $cfg_delim_begin
 conn $name
 ${auth_str}
-${auth_mode}
-  ike=aes256gcm128-aes128gcm128-ecp384-ecp256-prfsha384-prfsha256,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
-  esp=aes256gcm128-ecp384-ecp256-esn-noesn,aes256-aes128-sha1-ecp384-ecp256-modp3072-modp2048-esn-noesn${compat}
+  ike=aes256gcm128-aes128gcm128-ecp384-ecp256-prfsha384-prfsha256,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
+  esp=aes256gcm128-ecp384-ecp256-esn-noesn,aes256-aes128-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-esn-noesn${compat}
   left=$oaddr
 ${server_id}
 ${fragmentation}
@@ -446,6 +446,7 @@ ${fragmentation}
   rekey=no
   auto=add
   keyexchange=ikev2
+${auth_mode}
 EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
