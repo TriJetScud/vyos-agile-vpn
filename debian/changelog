@@ -1,3 +1,10 @@
+vyos-vpn-agile (0.1.8) UNRELEASED; urgency=low
+
+  * Add support for EAP-TLS
+  * Add an option to pin a specific remote-ca
+  * Add modp4096 to the default proposal
+
+ -- Florent Daigniere <nextgens@freenetproject.org>  Mon, 15 April 2016 12:00:00 +0000
 vyos-vpn-agile (0.1.7) UNRELEASED; urgency=low
 
   * Try suite-B as the first proposal; requires 1.8.5+
