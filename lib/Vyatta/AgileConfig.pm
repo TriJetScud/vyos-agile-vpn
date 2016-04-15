@@ -17,6 +17,7 @@ my $SERVER_KEY_PATH = '/etc/ipsec.d/private';
 my %fields = (
   _mode             => undef,
   _x509_cacert      => undef,
+  _x509_rcacert      => undef,
   _x509_crl         => undef,
   _x509_s_cert      => undef,
   _x509_s_key       => undef,
@@ -75,6 +76,7 @@ sub setup {
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnValue("$pfx ca-cert-file");
+  $self->{_x509_rcacert} = $config->returnValue("$pfx remote-ca-cert-file");
   $self->{_x509_crl} = $config->returnValue("$pfx crl-file");
   $self->{_x509_s_cert} = $config->returnValue("$pfx server-cert-file");
   $self->{_x509_s_key} = $config->returnValue("$pfx server-key-file");
@@ -152,6 +154,7 @@ sub setupOrig {
   $self->{_ike_lifetime} = $config->returnOrigValue('ike-settings ike-lifetime');
   my $pfx = 'ike-settings authentication x509';
   $self->{_x509_cacert} = $config->returnOrigValue("$pfx ca-cert-file");
+  $self->{_x509_rcacert} = $config->returnOrigValue("$pfx remote-ca-cert-file");
   $self->{_x509_crl} = $config->returnOrigValue("$pfx crl-file");
   $self->{_x509_s_cert} = $config->returnOrigValue("$pfx server-cert-file");
   $self->{_x509_s_key} = $config->returnOrigValue("$pfx server-key-file");
@@ -236,6 +239,7 @@ sub isDifferentFrom {
   return 1 if ($this->{_compat} ne $that->{_compat});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
+  return 1 if ($this->{_x509_rcacert} ne $that->{_x509_rcacert});
   return 1 if ($this->{_x509_crl} ne $that->{_x509_crl});
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
@@ -269,6 +273,7 @@ sub needsRestart {
   return 1 if ($this->{_mode} ne $that->{_mode});
   return 1 if ($this->{_ike_lifetime} ne $that->{_ike_lifetime});
   return 1 if ($this->{_x509_cacert} ne $that->{_x509_cacert});
+  return 1 if ($this->{_x509_rcacert} ne $that->{_x509_rcacert});
   return 1 if ($this->{_x509_crl} ne $that->{_x509_crl});
   return 1 if ($this->{_x509_s_cert} ne $that->{_x509_s_cert});
   return 1 if ($this->{_x509_s_key} ne $that->{_x509_s_key});
@@ -310,6 +315,8 @@ sub setupX509IfNecessary {
 
   return "Invalid ca-cert-file \"$self->{_x509_cacert}\""
     if (! -f $self->{_x509_cacert});
+  return "Invalid remote-ca-cert-file \"$self->{_x509_rcacert}\""
+    if (! -f $self->{_x509_rcacert});
   return "Invalid server-cert-file \"$self->{_x509_s_cert}\""
     if (! -f $self->{_x509_s_cert});
   return "Invalid server-key-file \"$self->{_x509_s_key}\""
@@ -326,6 +333,8 @@ sub setupX509IfNecessary {
 
   system("cp -f $self->{_x509_cacert} $CA_CERT_PATH/");
   return "Cannot copy $self->{_x509_cacert}" if ($? >> 8);
+  system("cp -f $self->{_x509_rcacert} $CA_CERT_PATH/");
+  return "Cannot copy $self->{_x509_rcacert}" if ($? >> 8);
   system("cp -f $self->{_x509_s_cert} $SERVER_CERT_PATH/");
   return "Cannot copy $self->{_x509_s_cert}" if ($? >> 8);
   system("cp -f $self->{_x509_s_key} $SERVER_KEY_PATH/");
@@ -387,22 +396,13 @@ sub get_ra_conn {
   my $client_ip6_pool;
   my $auth_str;
   my $auth_mode;
+  my $right_ca;
   my $server_id;
   return (undef, "IPsec authentication mode not defined")
     if (!defined($self->{_mode}));
   if (defined($self->{_client_ip6_pool})) {
     $client_ip6_pool = ",". $self->{_client_ip6_pool};
   }
-	# auth modes for client
-	if ($self->{_auth_mode} eq 'x509') {
-		$auth_mode = "  rightauth=pubkey";
-	}
-	if ($self->{_auth_mode} eq 'local') {
-		$auth_mode = "  rightauth=eap-mschapv2\n  eap_identity=%any";
-	}
-	if ($self->{_auth_mode} eq 'radius') {
-		$auth_mode = "  rightauth=eap-radius\n  eap_identity=%any";
-	}
   my $fragmentation;
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes";
@@ -422,31 +422,37 @@ sub get_ra_conn {
     return (undef, "\"server-cert-file\" not defined")
       if (!defined($server_cert));
     $server_cert =~ s/^.*(\/[^\/]+)$/${SERVER_CERT_PATH}$1/;
-    $auth_str =<<EOS
+    $auth_str =<<EOS;
   leftcert=$server_cert
   leftsendcert=always
   leftauth=pubkey
 EOS
+  if (defined($self->{_x509_rcacert})) {
+    my $remote_ca = $self->{_x509_rcacert};
+    return (undef, "\"remote-ca-cert-file\" not defined")
+      if (!defined($remote_ca));
+    $remote_ca =~ s/^.*(\/[^\/]+)$/${CA_CERT_PATH}$1/;
+    $right_ca = "rightca=" . $self->{_x509_rcacert};
+    $right_ca = $right_ca . "\n  rightca2=" . $self->{_x509_rcacert};
+  }
   }
   my $str =<<EOS;
 $cfg_delim_begin
 conn $name
 ${auth_str}
-  ike=aes256gcm128-aes128gcm128-ecp384-ecp256-prfsha384-prfsha256,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
-  esp=aes256gcm128-ecp384-ecp256-esn-noesn,aes256-aes128-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-esn-noesn${compat}
   left=$oaddr
 ${server_id}
-${fragmentation}
   leftsubnet=0.0.0.0/0,::/0
   leftfirewall=yes
   lefthostaccess=yes
+  ike=aes256gcm128-aes128gcm128-ecp384-ecp256-prfsha384-prfsha256,aes256-aes128-sha384-sha256-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-prfsha384-prfsha256-prfsha1${compat}
+  esp=aes256gcm128-ecp384-ecp256-esn-noesn,aes256-aes128-sha1-ecp384-ecp256-modp4096-modp3072-modp2048-esn-noesn${compat}
+${fragmentation}
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
   mobike=yes
   rekey=no
-  auto=add
   keyexchange=ikev2
-${auth_mode}
 EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
@@ -457,6 +463,42 @@ EOS
     $str .= "  inactivity=" . $self->{_inactivity} . "\n";
   } else {
     $str .= "  inactivity=28800s\n";
+  }
+  $str .= "\n";
+  # auth modes for client
+  if ($self->{_auth_mode} eq 'x509') {
+    $str .= <<EOS;
+conn $name-pubkey
+  also=$name
+  ${right_ca}
+  rightauth=pubkey
+  auto=add
+
+conn $name-eaptls
+  also=$name-pubkey
+  rightauth=eap-tls
+  rightsendcert=never
+  eap_identity=%any
+  auto=add
+EOS
+  }
+  if ($self->{_auth_mode} eq 'local') {
+    $str .= <<EOS;
+conn $name-mschapv2
+  also=$name
+  rightauth=eap-mschapv2
+  eap_identity=%any
+  auto=add
+EOS
+  }
+  if ($self->{_auth_mode} eq 'radius') {
+    $str .= <<EOS;
+conn $name-radius
+  also=$name
+  rightauth=eap-radius
+  eap_identity=%any
+  auto=add
+EOS
   }
   $str .= "$cfg_delim_end\n";
   return ($str, undef);
