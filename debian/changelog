@@ -1,3 +1,44 @@
+vyos-vpn-agile (0.2.0) unstable; urgency=low
+
+  * 0.2.0 Release
+
+  [ Jeff Leung ]
+  * Allow the user to specify the server-id for certain problematic
+    IKEv2 RA clients
+  * Add "inactivity" option for IKEv2 Remote Access VPNs
+
+  [ Florent Daigniere ]
+  * Smarter/secure defaults
+  * Ensure we always send the ipv6 default route
+  * MacOS compatibility: derive the leftid from rightid, always send our
+    cert
+  * Let the user configure leftid/rightid
+  * update changelog
+  * fix indent
+  * Apparently we need leftfirewall=yes too
+  * Ensure that the daemon is restarted if we change the local/remote id
+  * Bump version
+  * Add lefthostaccess=yes
+  * bump version to 0.1.4
+  * With ikev2 we should give rekey is chance
+  * If we can do aes256gcm128 in IKE that's good too
+  * Add a compatiblity mode (permissive proposals)
+  * bump version
+  * Disable rekeying again, it's broken
+  * Bump version to 0.1.7 ; try suiteB first (requires 1.8.5+)
+  * Add modp4096 to the proposal too
+  * add a remote-ca-cert-file option as well as support for EAP-TLS
+  * release 0.1.8
+
+  [ Jeff Leung ]
+  * Allow the user to define seperate IKE and ESP proposals for IKEv2
+    Remote Access Connections
+  * Restore the dhcp-interfaces option and resolve a regression that the
+    new code introduced
+  * Block dhcp-interface and outside-address being defined together
+
+ -- Jeff Leung <jleung@v10networks.ca>  Sat, 16 Apr 2016 00:24:37 -0700
+
 vyos-vpn-agile (0.1.8) UNRELEASED; urgency=low
 
   * Add support for EAP-TLS
