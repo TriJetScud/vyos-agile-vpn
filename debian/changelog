@@ -1,3 +1,9 @@
+vyos-vpn-agile (0.2.1) unstable; urgency=low
+
+  * Update isDifferent from function for Client IP pools
+
+ -- Jeff Leung <jleung@v10networks.ca>  Sat, 16 Apr 2016 13:28:39 -0700
+
 vyos-vpn-agile (0.2.0) unstable; urgency=low
 
   * 0.2.0 Release
