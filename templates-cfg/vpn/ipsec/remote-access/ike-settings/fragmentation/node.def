@@ -1,4 +1,4 @@
-help: Enable IKEv2 Fragmentation Extension as defined in RFC 7383 
+help: Enable IKEv2 Fragmentation Extension as defined in RFC 7383 or IKE Fragmentation as defined in MS-IKEE IKE Fragmentation depending on operating-mode
 type: txt
 default: "disable"
 syntax:expression: $VAR(@) in "enable", "disable"; "must be enabled or disabled"

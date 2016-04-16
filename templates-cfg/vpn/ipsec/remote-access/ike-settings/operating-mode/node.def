@@ -1,0 +1,6 @@
+help: Operating mode of the VPN Services 
+type: txt
+default: "ikev2-mobike"
+syntax:expression: $VAR(@) in "ikev2-mobike", "ikev1-xauth"; "must be enabled or disabled"
+val_help: ikev1-xauth; IKEv1 XAUTH
+val_help: ikev2-mobike; IKEv2 MOBIKE (default)
