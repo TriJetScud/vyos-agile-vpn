@@ -255,8 +255,8 @@ sub isDifferentFrom {
   return 1 if ($this->{_x509_r_id} ne $that->{_x509_r_id});
   return 1 if ($this->{_out_addr} ne $that->{_out_addr});
   return 1 if ($this->{_dhcp_if} ne $that->{_dhcp_if});
-  return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
-  return 1 if ($this->{_client_ip_stop} ne $that->{_client_ip_stop});
+  return 1 if ($this->{_client_ip_pool} ne $that->{_client_ip_pool});
+  return 1 if ($this->{_client_ip6_pool} ne $that->{_client_ip6_pool});
   return 1 if ($this->{_auth_mode} ne $that->{_auth_mode});
   return 1 if ($this->{_auth_require} ne $that->{_auth_require});
   return 1 if ($this->{_mtu} ne $that->{_mtu});
