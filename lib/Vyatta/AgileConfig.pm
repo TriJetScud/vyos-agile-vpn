@@ -30,6 +30,7 @@ my %fields = (
   _client_ip_pool   => undef,
   _client_ip6_pool  => undef,
   _auth_mode        => undef,
+  _oper_mode        => undef,
   _mtu              => undef,
   _ike_lifetime     => undef,
   _inactivity       => undef,
@@ -76,6 +77,7 @@ sub setup {
   $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
   $self->{_inactivity} = $config->returnValue('inactivity');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
+  $self->{_oper_mode} = $config->returnValue('ike-settings operating-mode');
   $self->{_ike_group} = $config->returnValue('ike-settings proposal 1 encryption');
   $self->{_esp_group} = $config->returnValue('esp-settings proposal 1 encryption');
   my $pfx = 'ike-settings authentication x509';
@@ -156,6 +158,7 @@ sub setupOrig {
   $self->{_inactivity} = $config->returnOrigValue('inactivity');
   $self->{_fragmentation} = $config->returnOrigValue('ike-settings fragmentation');
   $self->{_ike_lifetime} = $config->returnOrigValue('ike-settings ike-lifetime');
+  $self->{_oper_mode} = $config->returnOrigValue('ike-settings operating-mode');
   $self->{_ike_group} = $config->returnOrigValue('ike-settings proposal 1 encryption');
   $self->{_esp_group} = $config->returnOrigValue('esp-settings proposal 1 encryption');
   my $pfx = 'ike-settings authentication x509';
@@ -471,9 +474,7 @@ ${server_id}
 ${fragmentation}
   right=%any
   rightsourceip=${client_ip_pool}${client_ip6_pool}
-  mobike=yes
   rekey=no
-  keyexchange=ikev2
 EOS
   if (defined($self->{_ike_lifetime})){
     $str .= "  ikelifetime=$self->{_ike_lifetime}\n";
@@ -486,13 +487,16 @@ EOS
     $str .= "  inactivity=28800s\n";
   }
   $str .= "\n";
-  # auth modes for client
-  if ($self->{_auth_mode} eq 'x509') {
-    $str .= <<EOS;
+  if ($self->{_oper_mode} eq 'ikev2-mobike') {
+    # auth modes for client
+    if ($self->{_auth_mode} eq 'x509') {
+      $str .= <<EOS;
 conn $name-pubkey
   also=$name
   ${right_ca}
   rightauth=pubkey
+  keyexchange=ikev2
+  mobike=yes
   auto=add
 
 conn $name-eaptls
@@ -500,26 +504,33 @@ conn $name-eaptls
   rightauth=eap-tls
   rightsendcert=never
   eap_identity=%any
+  keyexchange=ikev2
+  mobike=yes
   auto=add
 EOS
-  }
-  if ($self->{_auth_mode} eq 'local') {
-    $str .= <<EOS;
+    }
+    if ($self->{_auth_mode} eq 'local') {
+      $str .= <<EOS;
 conn $name-mschapv2
   also=$name
   rightauth=eap-mschapv2
   eap_identity=%any
+  keyexchange=ikev2
+  mobike=yes
   auto=add
 EOS
-  }
-  if ($self->{_auth_mode} eq 'radius') {
-    $str .= <<EOS;
+    }
+    if ($self->{_auth_mode} eq 'radius') {
+      $str .= <<EOS;
 conn $name-radius
   also=$name
   rightauth=eap-radius
   eap_identity=%any
+  keyexchange=ikev2
+  mobike=yes
   auto=add
 EOS
+    }
   }
   $str .= "$cfg_delim_end\n";
   return ($str, undef);
