@@ -36,8 +36,14 @@ if ($config->isEmpty()) {
 	
 	if ( ! -f $STRONGSWAN_ATTR_CONF) {
 		move("$STRONGSWAN_ATTR_CONF.noload", $STRONGSWAN_ATTR_CONF);
+    if (-f $STRONGSWAN_AGILE_CONF) {
+      unlink($STRONGSWAN_AGILE_CONF);
+    }
 	} if ( ! -f $STRONGSWAN_RADIUS_CONF) {
 		move("$STRONGSWAN_RADIUS_CONF.noload" , $STRONGSWAN_RADIUS_CONF);
+    if (-f $STRONGSWAN_RADIUS_AGILE_CONF) {
+      unlink($STRONGSWAN_RADIUS_AGILE_CONF);
+    }
 	}
 	if ( -f $FILE_IPSEC_RACONN ) {
 		system("rm -f $FILE_IPSEC_RACONN");
