@@ -1,0 +1,6 @@
+type: txt
+help: Authentication mode for IPsec
+default: "x509"
+syntax:expression: $VAR(@) in "pre-shared-secret", "x509"; "Authentication mode must be \"pre-shared-secret\" or \"x509\""
+val_help: pre-shared-secret; Use pre-shared secret for IPsec authentication
+val_help: x509; Use X.509 certificate for IPsec authentication

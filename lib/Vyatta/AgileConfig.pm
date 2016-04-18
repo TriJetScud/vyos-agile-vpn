@@ -16,6 +16,7 @@ my $SERVER_KEY_PATH = '/etc/ipsec.d/private';
 
 my %fields = (
   _mode             => undef,
+  _psk              => undef,
   _x509_cacert      => undef,
   _x509_rcacert      => undef,
   _x509_crl         => undef,
@@ -72,8 +73,8 @@ sub setup {
   }
   $self->{_dhcp_if} = $config->returnValue('dhcp-interface');
   $self->{_compat} = $config->returnValue('compatibility-mode');
-  # hard code this to x509 for now
-  $self->{_mode} = 'x509';
+  $self->{_mode} = $config->returnValue('ike-settings authentication mode');
+  $self->{_psk} = $config->returnValue('ike-settings authentication pre-shared-secret');
   $self->{_fragmentation} = $config->returnValue('ike-settings fragmentation');
   $self->{_inactivity} = $config->returnValue('inactivity');
   $self->{_ike_lifetime} = $config->returnValue('ike-settings ike-lifetime');
@@ -296,6 +297,7 @@ sub needsRestart {
   return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
   return 1 if ($this->{_client_ip_stop} ne $that->{_client_ip_stop});
   return 1 if ($this->{_mtu} ne $that->{_mtu});
+  return 1 if ($this->{_auth_mode} ne $that->{_auth_mode});
   return 1 if (globalIPsecChanged());
   
   return 0;
@@ -354,25 +356,47 @@ sub setupX509IfNecessary {
 
 sub get_ipsec_secrets {
   my ($self) = @_;
-  # X509
-  my $key_file = $self->{_x509_s_key};
-  my $key_pass = $self->{_x509_s_pass};
-  my $key_type = $self->{_x509_t_key};
-  my $key_str;
-  return (undef, "\"server-key-file\" not defined")
-    if (!defined($key_file));
-  if ($key_type eq 'ecdsa') {
-	$key_str = 'ECDSA';
-  } else {
-	$key_str = 'RSA';
-  }
-  my $pstr = (defined($key_pass) ? " \"$key_pass\"" : '');
-  $key_file =~ s/^.*(\/[^\/]+)$/${SERVER_KEY_PATH}$1/;
-  my $str =<<EOS;
+  my $str;
+  if ($self->{_mode} eq 'x509') {
+    # X509
+    my $key_file = $self->{_x509_s_key};
+    my $key_pass = $self->{_x509_s_pass};
+    my $key_type = $self->{_x509_t_key};
+    my $key_str;
+    return (undef, "\"server-key-file\" not defined")
+      if (!defined($key_file));
+    if ($key_type eq 'ecdsa') {
+    $key_str = 'ECDSA';
+    } else {
+    $key_str = 'RSA';
+    }
+    my $pstr = (defined($key_pass) ? " \"$key_pass\"" : '');
+    $key_file =~ s/^.*(\/[^\/]+)$/${SERVER_KEY_PATH}$1/;
+    $str =<<EOS;
 $cfg_delim_begin
 : ${key_str} ${key_file}$pstr
 $cfg_delim_end
 EOS
+  }
+  if ($self->{_mode} eq 'pre-shared-secret') {
+    # PSK
+    my $key = $self->{_psk};
+    my $oaddr = $self->{_out_addr};
+    if (defined($self->{_dhcp_if})){
+      return  (undef, "The specified interface is not configured for DHCP")
+        if (!Vyatta::Misc::is_dhcp_enabled($self->{_dhcp_if},0));
+      my $dhcpif = $self->{_dhcp_if};
+      $oaddr = get_dhcp_addr($dhcpif);
+    }
+    return (undef, "IPsec pre-shared secret not defined") if (!defined($key));
+    return (undef, "Outside address not defined") if (!defined($oaddr));
+    $str = "$cfg_delim_begin\n";
+    $oaddr = "#" if ($oaddr eq '');
+    $str .= "$oaddr %any : PSK \"$key\"";
+    $str .= " \#dhcp-ra-interface=$self->{_dhcp_if}\#" if (defined($self->{_dhcp_if}));
+    $str .= "\n";
+    $str .= "$cfg_delim_end\n";
+  }
     return ($str, undef);
 }
 sub get_dhcp_addr{
@@ -427,6 +451,12 @@ sub get_ra_conn {
   if (defined($self->{_client_ip6_pool})) {
     $client_ip6_pool = ",". $self->{_client_ip6_pool};
   }
+  my $mode;
+  if ($self->{_mode} eq 'pre-shared-secret') {
+    $mode = "psk";
+  } else {
+    $mode = "pubkey";
+  }
   my $fragmentation;
   if (defined($self->{_fragmentation}) && $self->{_fragmentation} eq 'enable') {
      $fragmentation = "  fragmentation=yes";
@@ -447,9 +477,9 @@ sub get_ra_conn {
       if (!defined($server_cert));
     $server_cert =~ s/^.*(\/[^\/]+)$/${SERVER_CERT_PATH}$1/;
     $auth_str =<<EOS;
+  leftauth=pubkey
   leftcert=$server_cert
   leftsendcert=always
-  leftauth=pubkey
 EOS
   if (defined($self->{_x509_rcacert})) {
     my $remote_ca = $self->{_x509_rcacert};
@@ -459,6 +489,9 @@ EOS
     $right_ca = "rightca=" . $self->{_x509_rcacert};
     $right_ca = $right_ca . "\n  rightca2=" . $self->{_x509_rcacert};
   }
+  }
+  if ($self->{_mode} eq 'pre-shared-secret') {
+    $auth_str = "  leftauth=psk\n";
   }
   my $str =<<EOS;
 $cfg_delim_begin
@@ -489,6 +522,9 @@ EOS
   $str .= "\n";
   if ($self->{_oper_mode} eq 'ikev2-mobike') {
     # auth modes for client
+    if ($self->{_mode} eq 'pre-shared-secret') {
+      return(undef,"Pre-shared secrets are unsupported for IEKv2 Remote Access VPN's");
+    }
     if ($self->{_auth_mode} eq 'x509') {
       $str .= <<EOS;
 conn $name-pubkey
@@ -532,6 +568,57 @@ conn $name-radius
 EOS
     }
   }
+  if ($self->{_oper_mode} eq 'ikev1-xauth') {
+    if ($self->{_auth_mode} eq 'x509') {
+      return(undef, "X.509 user authentication is not supported with IKEv1 XAUTH Remote Access VPN");
+    }
+    if ($self->{_auth_mode} eq 'local') {
+      $str .= <<EOS;
+conn $name-xauth-local
+  also=$name
+  rightauth=$mode
+  rightauth2=xauth
+  keyexchange=ikev1
+  auto=add
+EOS
+    }
+    if ($self->{_auth_mode} eq 'radius') {
+      $str .= <<EOS;
+conn $name-xauth-radius
+  also=$name
+  rightauth=$mode
+  rightauth2=xauth-eap
+  keyexchange=ikev1
+  auto=add
+EOS
+    }
+  }
+  if ($self->{_oper_mode} eq 'ikev1-hybrid') {
+    if ($self->{_mode} eq 'pre-shared-secret') {
+      return(undef,"Pre-shared secrets are not supported for IKEv1 XAUTH Hybrid Remote Access VPNs");
+    }
+    if ($self->{_auth_mode} eq 'x509') {
+      return(undef, "X.509 user authentication is not supported with IKEv1 XAUTH Remote Access VPN");
+    }
+    if ($self->{_auth_mode} eq 'local') {
+      $str .= <<EOS;
+conn $name-xauth-hybrid-local
+  also=$name
+  rightauth=xauth
+  keyexchange=ikev1
+  auto=add
+EOS
+    }
+    if ($self->{_auth_mode} eq 'radius') {
+      $str .= <<EOS;
+conn $name-xauth-hybrid-radius
+  also=$name
+  rightauth=xauth-eap
+  keyexchange=ikev1
+  auto=add
+EOS
+    }
+  }
   $str .= "$cfg_delim_end\n";
   return ($str, undef);
 }
@@ -543,6 +630,10 @@ sub get_strongswan_secrets {
   my @users = @{$self->{_auth_local}};
   print "IKEv2 VPN warning: Local user authentication not defined\n"
     if ($self->{_auth_mode} eq 'local' && scalar(@users) == 0);
+  my $mode = "EAP";
+  if ($self->{_oper_mode} eq 'ikev1-xauth') {
+    $mode = "XAUTH";
+  }
   my $str = $cfg_delim_begin;
   if ($self->{_auth_mode} eq 'local') {
     while (scalar(@users) > 0) {
@@ -551,7 +642,7 @@ sub get_strongswan_secrets {
 	  my $disable = shift @users;
       if ($disable eq 'disable') {
       } else {
-        $str .= ("\n$user : EAP \"$pass\"\n");
+        $str .= ("\n$user : $mode \"$pass\"\n");
       }
     }
   }
