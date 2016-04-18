@@ -1,3 +1,14 @@
+vyos-vpn-agile (0.2.5) unstable; urgency=low
+
+  * Stage the configuration commands for IKEv1 XAUTH VPN's
+  * Handle the new 'operating-mode' option.
+  * Properly clean up RADIUS and Attribute related generated
+    configuration files
+  * Implement IKEv1 XAUTH RSA and PSK and IKEv1 XAUTH Hybrid Operating
+    Mode
+
+ -- Jeff Leung <jleung@v10networks.ca>  Mon, 18 Apr 2016 00:15:49 -0700
+
 vyos-vpn-agile (0.2.1) unstable; urgency=low
 
   * Update isDifferent from function for Client IP pools
