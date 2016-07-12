@@ -430,6 +430,7 @@ sub get_ra_conn {
     if (!defined($self->{_client_ip_pool}));
   my $client_ip_pool = $self->{_client_ip_pool};
   my $client_ip6_pool;
+  my $left_subnet_route = "0.0.0.0/0";
   my $auth_str;
   my $auth_mode;
   my $right_ca;
@@ -450,6 +451,7 @@ sub get_ra_conn {
   }
   if (defined($self->{_client_ip6_pool})) {
     $client_ip6_pool = ",". $self->{_client_ip6_pool};
+    $left_subnet_route = "," . "::/0";
   }
   my $mode;
   if ($self->{_mode} eq 'pre-shared-secret') {
@@ -499,7 +501,7 @@ conn $name
 ${auth_str}
   left=$oaddr
 ${server_id}
-  leftsubnet=0.0.0.0/0,::/0
+  leftsubnet=${left_subnet_route}
   leftfirewall=yes
   lefthostaccess=yes
   ike=${ike_str}${compat}
