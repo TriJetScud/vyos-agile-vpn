@@ -1,3 +1,10 @@
+vyos-vpn-agile (0.2.6) unstable; urgency=low
+
+  * Only send out IPv6 default route when subnet6 is configured
+  * Fix AES GCM Cipher names
+
+ -- Jeff Leung <jleung@v10networks.ca>  Tue, 12 Jul 2016 14:35:38 -0700
+
 vyos-vpn-agile (0.2.5) unstable; urgency=low
 
   * Stage the configuration commands for IKEv1 XAUTH VPN's
