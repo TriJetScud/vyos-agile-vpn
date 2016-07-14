@@ -451,7 +451,7 @@ sub get_ra_conn {
   }
   if (defined($self->{_client_ip6_pool})) {
     $client_ip6_pool = ",". $self->{_client_ip6_pool};
-    $left_subnet_route = "," . "::/0";
+    $left_subnet_route .= "," . "::/0";
   }
   my $mode;
   if ($self->{_mode} eq 'pre-shared-secret') {
