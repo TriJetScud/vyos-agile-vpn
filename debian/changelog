@@ -1,3 +1,9 @@
+vyos-vpn-agile (0.2.7) unstable; urgency=low
+
+  * Fix the bug where IPv6 subnets generate the wrong leftsubnet= output
+
+ -- Jeff Leung <jleung@v10networks.ca>  Thu, 14 Jul 2016 00:45:02 -0700
+
 vyos-vpn-agile (0.2.6) unstable; urgency=low
 
   * Only send out IPv6 default route when subnet6 is configured
