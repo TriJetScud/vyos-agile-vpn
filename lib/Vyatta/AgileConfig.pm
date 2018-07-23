@@ -98,6 +98,7 @@ sub setup {
   $self->{_auth_mode} = $config->returnValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnValue('mtu');
+  $self->{_left_updown} = $config->returnValue('updown-script');
 
   my @users = $config->listNodes('authentication local-users username');
   foreach my $user (@users) {
@@ -179,6 +180,7 @@ sub setupOrig {
   $self->{_auth_mode} = $config->returnOrigValue('authentication mode');
   $self->{_auth_require} = $config->returnValue('authentication require');
   $self->{_mtu} = $config->returnOrigValue('mtu');
+  $self->{_left_updown} = $config->returnValue('updown-script');
 
   my @users = $config->listOrigNodes('authentication local-users username');
   foreach my $user (@users) {
@@ -264,6 +266,7 @@ sub isDifferentFrom {
   return 1 if ($this->{_auth_mode} ne $that->{_auth_mode});
   return 1 if ($this->{_auth_require} ne $that->{_auth_require});
   return 1 if ($this->{_mtu} ne $that->{_mtu});
+  return 1 if ($this->{_left_updown} ne $that->{_left_updown});
   return 1 if (listsDiff($this->{_auth_local}, $that->{_auth_local}));
   return 1 if (listsDiff($this->{_auth_radius}, $that->{_auth_radius}));
   return 1 if (listsDiff($this->{_auth_radius_keys},
@@ -297,6 +300,7 @@ sub needsRestart {
   return 1 if ($this->{_client_ip_start} ne $that->{_client_ip_start});
   return 1 if ($this->{_client_ip_stop} ne $that->{_client_ip_stop});
   return 1 if ($this->{_mtu} ne $that->{_mtu});
+  return 1 if ($this->{_left_updown} ne $that->{_left_updown});
   return 1 if ($this->{_auth_mode} ne $that->{_auth_mode});
   return 1 if (globalIPsecChanged());
   
@@ -470,6 +474,9 @@ sub get_ra_conn {
   if (defined($self->{_x509_l_id})) {
      $server_id = "  leftid=" . $self->{_x509_l_id}. "\n";
   }
+  if (defined($self->{_left_updown})) {
+     $leftupdown = "  leftupdown=" . $self->{_left_updown}. "\n";
+  }
   if (defined($self->{_x509_r_id})) {
      $server_id = $server_id . "  rightid=" . $self->{_x509_r_id};
   }
@@ -504,6 +511,7 @@ ${server_id}
   leftsubnet=${left_subnet_route}
   leftfirewall=yes
   lefthostaccess=yes
+${leftupdown}
   ike=${ike_str}${compat}
   esp=${esp_str}${compat}
 ${fragmentation}
